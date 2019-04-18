@@ -1,0 +1,5 @@
+[client]
+database = test
+user = test
+password = test123
+default-character-set = utf8mb4

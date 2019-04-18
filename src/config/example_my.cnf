@@ -1,0 +1,7 @@
+# Configuration file for mysql. Enter the values below and save the file as my.cnf
+[client]
+database = 
+user = 
+password = 
+default-character-set = 
+host = 

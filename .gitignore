@@ -1,3 +1,5 @@
+src/config/defines.py
+src/config/my.cnf
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

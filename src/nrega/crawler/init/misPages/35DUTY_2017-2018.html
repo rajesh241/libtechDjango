@@ -1,0 +1,1474 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="description" /><meta name="author" /><link rel="icon" href="../../favicon.ico" /><link href="css/bootstrap.css" rel="stylesheet" />
+    
+<style>
+     html {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+body {
+  position: relative;
+  margin: 0;
+  padding-bottom: 6rem;
+  min-height: 100%;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+}
+
+.demo {
+  margin: 0 auto;
+  padding-top: 64px;
+  max-width: 640px;
+  width: 94%;
+}
+
+.demo h1 {
+  margin-top: 0;
+}
+
+/**
+ * Footer Styles
+ */
+
+.footer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 1rem;
+  background-color: white;
+  text-align: center;
+  text-decoration: none;
+</style>
+    <title>
+
+</title>
+    <meta charset="UTF-8">
+    <title>MIS Report</title>
+    <!-- Latest compiled and minified CSS -->
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <link rel="stylesheet" href="css/misstyle.css">
+    <link rel="shortcut icon" href="images/title_logo.jpg" />
+    <script type="text/javascript">
+    $(window).load(function () {
+        $('[id*=btnLogin]').click(function () {
+            var txtCaptcha = $('[id*=txtCaptcha]')[1].value;
+            var hfCaptcha = $('[id*=hfCaptcha]').val();
+            if (parseInt(txtCaptcha) == parseInt(hfCaptcha)) {
+                $('.close').click();
+                $('#myModal').hide();
+            } 
+//            else if(parseInt(txtCaptcha).val() == '') {
+//             alert("Enter Captcha !");
+//              modelShowHide();
+//              }
+                         
+            else {
+                modelShowHide();
+            }
+        });
+    });
+    function modelShowHide() {
+        $('#myModal').modal({
+            backdrop: false,
+            keyboard: false,
+        }).animate({
+            top: '100px'
+        }).fadeIn(3000);
+    }
+
+
+     function setCounter(ctr) {             
+            var LinkName = ctr.text;
+            var LinkId =ctr.href;          
+            $.ajax({
+                url: 'MISReport4.aspx/SetCounter',
+                type: "POST",
+                data: '{ LinkName:"' + LinkName + '",LinkId:"' + LinkId + '" }',
+                contentType: "application/json;",
+                dataType: "json",
+                success: function (data) {
+                },
+                error: function (errormessage) {
+                }
+            });
+        }
+    </script>
+    <style type="text/css">
+        *
+        {
+            box-sizing: border-box;
+        }
+        
+        /* Create three equal columns that floats next to each other */
+        .column
+        {
+            float: left;
+            width: 33.33%;
+            padding: 10px;
+        }
+        
+        /* Clear floats after the columns */
+        .row:after
+        {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        
+        /* Responsive layout - makes the three columns stack on top of each other instead of next to each other */
+        @media screen and (max-width: 550px)
+        {
+            .column
+            {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+ <nav class="navbar navbar-inverse">
+      <div class="container">
+       <div class="row">
+       <div class="col-lg-6 col-md-6 col-sm-6">
+       <a href="#"><img src="images/goi.png" class="img-responsive" alt="goi"/></a>
+       </div>
+        <div class="col-lg-6 col-md-6 col-sm-6">
+		<a  href="#"><img src="images/mgnrega.png" class="img-responsive"  style="float:right" alt="mgnrega"/></a>
+        <a  href="https://swachhbharat.mygov.in/" target="_blank"><img src="images/swach-bharat.png" class="img-responsive"  style="float:right" alt="mgnrega"/></a>
+		</div>         
+
+      </div>
+	  </div>
+</nav>
+
+
+    <form name="aspnetForm" method="post" action="MISreport4.aspx" onsubmit="javascript:return WebForm_OnSubmit();" id="aspnetForm">
+<div>
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__LASTFOCUS" id="__LASTFOCUS" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="LOZc/QWsRm1OycGdRouKbDZ5cFVThIGOVykUomrtvVZCTPWxZt60mMbGKvFlWrDJt+POGT460fU4j0Xa/GyFm2SHYNGP3iyKbLHbvq1aK5/dRGTdi6TApByx9V1mgkCW90oS/SqYsgE4LmY9U2YkVh+ipdGzr1cXEO1ikv7vBQ/Kn7+STCIOpO1sbcEUKZUgBi93N1Ue4d8QtUcXExDm9NEnVAPXeqzmDkZ1UjXIM3jjpWOD" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['aspnetForm'];
+if (!theForm) {
+    theForm = document.aspnetForm;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+
+<script src="/netnrega/WebResource.axd?d=7oVGAjEEEGzmSYNHS4SYiTLwGgzAcFuqcwOKWQlniLsehqOngK2FDrX5Bl5c262X6TB0z0i1KMJ7yG69l6KAPrI3OT81&amp;t=634789107960000000" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+function WebForm_OnSubmit() {
+if (typeof(ValidatorOnSubmit) == "function" && ValidatorOnSubmit() == false) return false;
+return true;
+}
+//]]>
+</script>
+
+<div>
+
+	<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="ZhR2EEYIAsygT31Hzh/nYcNhbTB2fwdDNyKaUou+/g6laK0/9ncXqvuuQiU3gHnrhNQvAnNOy1/eKfxZB69lbLW6nfcNjUYxCXlq+3yRGFHGNakjEEjwjNqUd4Sdd8+jINLwan2G95OxhgJt0jc/MHnZVpV1OFSLHUnYPVWBXg4dvGRVSZ7ltbFxggsjZre2MoDxBbm6xEEVCIucf6FsiZf6IE5OtXzB4nTk+oemWAKVefma2sqaPNl1qvRjs84Mo9mF8r7pFNV2RuGhiRFJrRF28fg26WzlJik0er5dAOLHlerVsVRGl6y+5Dtx2FEGIThz3Skmixh4sU3L+scBgZnZkSfxSPii3538aKTywWRmoMCNi4sydfTGUMriO5YF+z4yj6s+wdE4tTA9ixZjUzTEqIFhJ2YRwDulBXkcfmuHw81kCAjp1q1991xbmHPCfr0LJgBXNibTocos3p7wCoaSnMs=" />
+</div>
+    <div style="margin-bottom: 75px;">
+    
+    <div class="container">
+        <div id="myModal" class="modal fade" role="dialog" tabindex="-1" aria-labelledby="memberModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button id="ctl00_ContentPlaceHolder1_btnclose" type="button" class="close" data-dismiss="modal">
+                        </button>
+                        <h4 class="modal-title" id="memberModalLabel">
+                            Captcha Code</h4>
+                    </div>
+                    <div class="modal-body">
+                        
+                        <div class="form-group">
+                            
+                            <span id="ctl00_ContentPlaceHolder1_rfvtxtCaptcha" style="color:Red;visibility:hidden;">*</span>
+                            <div class="input-group">
+                                <span class="input-group-addon">
+                                    <span id="ctl00_ContentPlaceHolder1_lblStopSpam" style="color:Black;font-family:Verdana;font-size:12px;font-weight:bold;">What will be 7 + 19 = </span></span>
+                                <input name="ctl00$ContentPlaceHolder1$txtCaptcha" type="text" id="ctl00_ContentPlaceHolder1_txtCaptcha" class="form-control" onkeypress="return isNumberKeys(event)" placeholder="Enter Captcha" autocomplete="off" aria-required="true" />
+                                <input type="hidden" name="ctl00$ContentPlaceHolder1$hfCaptcha" id="ctl00_ContentPlaceHolder1_hfCaptcha" value="26" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <input type="submit" name="ctl00$ContentPlaceHolder1$btnLogin" value="Verify Code" id="ctl00_ContentPlaceHolder1_btnLogin" class="btn btn-primary btn-block" />
+                        </div>
+                        <img id="ctl00_ContentPlaceHolder1_imgcapcha" src="" style="width:200px;border-width:0px;" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="column pull-right">
+                <a href="http://nrega.nic.in/netnrega/mgnrega_new/Nrega_home.aspx">
+                    <img src="images/home-icon.png" class="img-responsive" style="float: right" alt="Home"></img></a>
+            </div>
+            <div id="ctl00_ContentPlaceHolder1_viewcombo">
+                <div class="column">
+                    <span id="ctl00_ContentPlaceHolder1_lbl_finyr" style="color:Black;font-weight:bold;"> Financial Year</span>
+                    <select name="ctl00$ContentPlaceHolder1$ddlfinyr" onchange="javascript:setTimeout('__doPostBack(\'ctl00$ContentPlaceHolder1$ddlfinyr\',\'\')', 0)" id="ctl00_ContentPlaceHolder1_ddlfinyr" class="form-control">
+	<option value="2018-2019">2018-2019</option>
+	<option selected="selected" value="2017-2018">2017-2018</option>
+	<option value="2016-2017">2016-2017</option>
+	<option value="2015-2016">2015-2016</option>
+	<option value="2014-2015">2014-2015</option>
+	<option value="2013-2014">2013-2014</option>
+
+</select>
+                </div>
+                <div class="column">
+                    <span id="ctl00_ContentPlaceHolder1_lbl_States" style="color:Black;font-weight:bold;"> State Name</span>
+                    <select name="ctl00$ContentPlaceHolder1$ddl_States" onchange="javascript:setTimeout('__doPostBack(\'ctl00$ContentPlaceHolder1$ddl_States\',\'\')', 0)" id="ctl00_ContentPlaceHolder1_ddl_States" class="form-control">
+	<option value="39">---Select---</option>
+	<option value="38">ALL</option>
+	<option value="01SANN">ANDAMAN AND NICOBAR</option>
+	<option value="02 APY">ANDHRA PRADESH</option>
+	<option value="03SARY">ARUNACHAL PRADESH</option>
+	<option value="04DASY">ASSAM</option>
+	<option value="05SBHY">BIHAR</option>
+	<option value="06DCGY">CHANDIGARH</option>
+	<option value="33RCHY">CHHATTISGARH</option>
+	<option value="07 DNN">DADRA &amp; NAGAR HAVELI</option>
+	<option value="08 DDN">DAMAN &amp; DIU</option>
+	<option value="10 GON">GOA</option>
+	<option value="11SGJY">GUJARAT</option>
+	<option value="12SHRY">HARYANA</option>
+	<option value="13DHPY">HIMACHAL PRADESH</option>
+	<option value="14SJKY">JAMMU AND KASHMIR</option>
+	<option value="34DJHY">JHARKHAND</option>
+	<option value="15DKNY">KARNATAKA</option>
+	<option value="16RKLY">KERALA</option>
+	<option value="19 LKN">LAKSHADWEEP</option>
+	<option value="17DMPY">MADHYA PRADESH</option>
+	<option value="18SMHY">MAHARASHTRA</option>
+	<option value="20SMNY">MANIPUR</option>
+	<option value="21SMGY">MEGHALAYA</option>
+	<option value="22SMZY">MIZORAM</option>
+	<option value="23SNLY">NAGALAND</option>
+	<option value="24SORY">ODISHA</option>
+	<option value="25SPCY">PUDUCHERRY</option>
+	<option value="26SPBY">PUNJAB</option>
+	<option value="27SRJY">RAJASTHAN</option>
+	<option value="28SSKY">SIKKIM</option>
+	<option value="29RTNY">TAMIL NADU</option>
+	<option value="36 TSY">TELANGANA</option>
+	<option value="30STRY">TRIPURA</option>
+	<option value="31RUPY">UTTAR PRADESH</option>
+	<option selected="selected" value="35DUTY">UTTARAKHAND</option>
+	<option value="32RWBY">WEST BENGAL</option>
+
+</select>
+                </div>
+            </div>
+        </div>
+        <div id="ctl00_ContentPlaceHolder1_viewreport">
+            
+            <div class="accordion-option">
+                <a href="javascript:void(0)" class="toggle-accordion active" accordion-id="#accordion">
+                </a>
+            </div>
+            <div class="clearfix">
+            </div>
+            <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="false">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTwo">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">R1.Beneficiary
+                                        Detail </a>
+                                </h4>
+                            </div>
+                            <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        <li><b><u>Job Card Related Reports</u></b></li>
+                                        <ol type="1">
+                                            
+                                            <li><a href="app_issue.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Category Wise Household/Workers</u></a></li>
+                                            
+                                            <li><a href="state_html/stregnojoball.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Jobcard Not Issued </u></a></li>
+                                            
+                                            <li><a href="state_html/UID_rpt.aspx?DBT=&page=S&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&Digest=HMXyhL8fgGRkqn00AhzlZQ" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Total No. of Aadhaar Nos. Entered for MGNREGA </u>
+                                            </a></li>
+                                            
+                                            <li><a href="age_reg_emp.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Agewise Registered and Employed Persons </u></a>
+                                            </li>
+                                            
+                                            <li><a href="state_html/BPL_ac_photo.aspx?DBT=&page=S&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&Digest=HMXyhL8fgGRkqn00AhzlZQ" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Deleted Job Card/Applicants with A/C No Photos Uploaded</u></a></li>
+                                            
+                                            <li><a href="state_html/uid_demograph_ABP.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Aadhaar Demographic Verification
+                                                    Status Report</u></a></li>
+                                            
+                                            <li><a href="FRA_rsby_rep.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>FRA Beneficiary Detail</u></a></li>
+                                            
+                                            <li><a href="number_of_mobile_number_sofworkers_registered.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA"
+                                                target='_parent' style="text-decoration: none" onmouseup='setCounter(this);'><u>Status
+                                                    of Mobile Number Registration of Workers</u></a></li>
+                                            
+                                        </ol>
+                                        <li><b><u>Worker Account Detail</u></b></li>
+                                        <ol type="1">
+                                            
+                                            <li><a href="acc_info_dbt.aspx?active=N&DBT=&page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=fI7pae2OPJlXkeUfipb6Yg" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Bank/State wise No. of accounts of MGNREGA </u>
+                                            </a></li>
+                                            
+                                            
+                                            <li><a href="state_html/Joint_Account_Frame.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Joint Account Detail</u></a></li>
+                                            
+                                            
+                                            <li><a href="state_html/mis_bank_post.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Account Opened and Amount Disbursed through Bank/Post
+                                                    Office in MGNREGA</u></a></li>
+                                            
+                                            <li><a href="bankcount.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>State wise No. of Banks of MGNREGA </u></a>
+                                            </li>
+                                            
+                                            
+                                            
+                                            <li><a href="dynamic_account_sk_ssk.aspx" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Dynamic Report on Skilled/Semi Skilled Worker Account
+                                                    Detail</u></a></li>
+                                            
+                                            
+                                            <li><a href="women_joint_acnt.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Women joint Account Detail</u></a></li>
+                                            
+                                            <li><a href="gender_sk_ssk.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Gender wise Skilled/Semi-Skilled Workers</u></a></li>
+                                            
+                                        </ol>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingFour">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseFour" aria-expanded="true" aria-controls="collapseFour">R2.Planning
+                                        of Works/SRDP </a>
+                                </h4>
+                            </div>
+                            <div id="collapseFour" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingTwo">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="morelabour.aspx" target='_parent' style="text-decoration: none" onmouseup='setCounter(this);'>
+                                            <u>Labour Budget</u></a></li>
+                                        <li><b><u>Approved Labour Budget</u></b></li>
+                                        <ol type="1">
+                                            
+                                            <li><a href="work_target_report.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Target for Works Focus Area</u></a></li>
+                                            
+                                            
+                                            <li><a href="LB_VS_MIS.aspx?lflag=eng&file1=empprov&page1=s&state_name=UTTARAKHAND&state_code=35&fin=2017-2018&fin_year=2017-2018&source=national&Digest=snTG+oAAciBzj4ET/jBsTg" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Approved Labour Budget Demand Month Wise And Persondays
+                                                    Generated</u></a></li>
+                                            
+                                        </ol>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTwo">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">R3.Demand and
+                                        Allocation of Works </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwo" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingTwo">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="demand_emp_demand.aspx?file1=dmd&page1=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin=2017-2018&fin_year=2017-2018&source=national&Digest=quk9ZEhnmVk54aIzQOgOHw" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Work Demand Pattern During the Financial year</u></a></li>
+                                        
+                                        <li><a href="Demand_gap.aspx?lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=4IVlCRH+OduFXC8o0Yb5/w" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Demand after GAP of 6 month </u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingFive">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseFive" aria-expanded="true" aria-controls="collapseFive">R4.Musteroll
+                                        and Wagelist </a>
+                                </h4>
+                            </div>
+                            <div id="collapseFive" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="state_html/Fortnight_rep3.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Muster Roll issue Vs Muster Roll filled</u></a></li>
+                                        
+                                        <li><a href="state_html/emuster_wagelist_rpt.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>E-Muster Roll and Wagelist
+                                                Report</u></a></li>
+                                        
+                                        <li><a href="state_html/allderegisterno1.aspx?fin_year=2017-2018&Page=S&source=national&Digest=QiGlW4HKCjJvU12rNjDBNA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Location with absence
+                                                of key Process </u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingThree">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseThree" aria-expanded="true" aria-controls="collapseThree">R5.Physical
+                                        Progress </a>
+                                </h4>
+                            </div>
+                            <div id="collapseThree" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <li><b><u>Employment Generation</u></b></li>
+                                    <ol type="1">
+                                        <li><a href="citizen_html/demregister.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Progress Report </u></a></li>
+                                        <li><a href="state_html/stdisabled.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Employment Provided to Disabled Persons</u></a></li>
+                                        
+                                        <li><a href="state_html/pmsr.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Employment Provided Period wise</u></a></li>
+                                        
+                                        <li><a href="demand_emp_demand.aspx?lflag=eng&file1=empprov&page1=s&state_name=UTTARAKHAND&state_code=35&fin=2017-2018&fin_year=2017-2018&source=national&Digest=snTG+oAAciBzj4ET/jBsTg" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Employment Pattern During the year</u></a></li>
+                                        
+                                        <li><a href="state_html/empstatusnewall_scst.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>SC ST Employment Status
+                                            </u></a></li>
+                                        
+                                        <li><a href="state_html/monthwise_nil_pd.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>GP With No Employment
+                                            </u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingsix">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseSix" aria-expanded="true" aria-controls="collapseSix">R6.Work Progress
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="collapseSix" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        <li><b><u>Work Status</u></b></li>
+                                        <ol type="1">
+                                            
+                                            <li><a href="Citizen_html/stworkreptemp_n.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Work Category Wise
+                                                </u></a></li>
+                                            
+                                            <li><a href="master_cat_status_n.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>New Work Category Wise </u></a></li>
+                                            
+                                            <li><a href="all_lvl_details_dashboard_new.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&val=work_new&Digest=WNu9nT2qOVlR5emrQL/gIg" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Consolidated New Work
+                                                    Category Wise </u></a></li>
+                                            
+                                        </ol>
+                                        
+                                        <li><a href="takenup_compwrk.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Yearly Work Completion Rate </u></a></li>
+                                        
+                                        
+                                        <li><a href="all_lvl_details_dashboard_new.aspx?fin_year=2017-2018&val=pd_outcome&Digest=ovqAsb6Ot/6zUCk8vazSNg" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Master Work Category
+                                                wise Analysis </u></a></li>
+                                        
+                                        
+                                        <li><a href="maintenance_block_plantation_rpt.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Maintenance of Block
+                                                and Bund Plantation </u></a></li>
+                                        
+                                        <li><a href="citizen_html/spillover.aspx?page=S&short_name=UT&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=4qWW12u8XfWSTaTMeS52+Q" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Spill Over Works </u></a></li>
+                                        
+                                        <li><a href="citizen_html/wrk_spill.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Progress of work execution </u></a></li>
+                                        
+                                        <li><a href="citizen_html/wrkstatlink.aspx?lflag=eng&state_name=UTTARAKHAND&state_code=35&fin=2017-2018&finyear=2017-2018&Page=s&workstatus=05&project=ALL&Digest=jhWOFbyv2n/OYRb+yQOUBQ" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Assets Created </u>
+                                        </a></li>
+                                        
+                                        <li><a href="state_html/work_catwise_exp.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>No. Of Works Under Convergence
+                                                Entered in MIS </u></a></li>
+                                        
+                                        <li><a href="ongo_comp_pds_wrk_rpt_new.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>PMAY(G) Houses Status </u></a></li>
+                                        
+                                        <li><a href="road_plantation_rpt.aspx?lflag=&page=S&state_nameUTTARAKHAND&state_code=35&fin_year=2017-2018&Digest=LYSHBwxkVf9sJwhImYrLeg" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Progress on Roadside Tree Plantation </u></a>
+                                        </li>
+                                        
+                                        <li><a href="nrm_works_report.aspx?live=&lflag=eng&page=S&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&Digest=4SBj+HxXj3pOxXLbn46kUw" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Progress Report on NRM/Water Related/All Plantation
+                                                Works </u></a></li>
+                                        
+                                        <li><a href="work_rpt_B.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Report on Individual Household Toilets </u></a>
+                                        </li>
+                                        <li><a href="all_lvl_details_dashboard_new.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&val=work_catwise&Digest=5kTdbApdUHPR9L7btNmWbQ" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Work Category wise No.
+                                                Of Works Under Convergence Entered in MIS </u></a></li>
+                                        <li><a href="state_html/tree_plantation_rpt.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Maintenance of Roadside
+                                                Tree Plantation </u></a></li>
+                                        
+                                        <li><a href="dpc_sms_new.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>MGNREGS daily status as per e-muster issued </u>
+                                        </a></li>
+                                        
+                                        <li><a href="state_html/work_actest_outcome.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Expected Outcome VS Actual
+                                                Outcomes </u></a></li>
+                                        
+                                        <li><a href="if_reg.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Household From vulnerable communities Stopped coming
+                                                for MGNREGA Works </u></a></li>
+                                        
+                                        <li><a href="dynamic_work_details.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Dynamic Report for Monitoring and details of incomplete
+                                                works </u></a></li>
+                                        
+                                        <li><a href="incomplete_works_Yearwise.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Dashboard for incomplete works (Works taken up till
+                                                FY 2016-2017) </u></a></li>
+                                        
+                                        <li><a href="State_html/Phy_comp_work.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Physical completion pending for final completion
+                                            </u></a></li>
+                                        
+                                        <li><a href="Sanc_Ongoing_Com_Wrk.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>MGNREGS Status; IHHL Sanction Under PMAY Scheme</u></a></li>
+                                        
+                                        <li><a href="map_iay_houses_Status.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Map of IAY Houses Status</u></a></li>
+                                        
+                                        <li><a href="Railway_work.aspx?page=S&short_name=UT&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=4qWW12u8XfWSTaTMeS52+Q" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Railway Related Works</u></a></li>
+                                        
+                                        <li><a href="Secure_work.aspx?page=S&short_name=UT&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=4qWW12u8XfWSTaTMeS52+Q" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Status of works shared to SECURE/BHUVAN</u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingSeven">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseSeven" aria-expanded="true" aria-controls="collapseSeven">R7.Financial
+                                        Progress </a>
+                                </h4>
+                            </div>
+                            <div id="collapseSeven" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        <li><b><u>Fund Release</u></b></li>
+                                        <ol type="1">
+                                            
+                                            
+                                            <li><a href="Citizen_html/fundstreportMtemp.aspx?flag_debited=D&lflag=eng&Page=s&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&is_statefund=Y&Digest=Z17m1IRqN3cptLit4eZHpw" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Financial Statement</u></a></li>
+                                            
+                                            
+                                            <li><a href="state_html/outlayvscomest.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Outlays & Outcomes</u></a></li>
+                                            
+                                        </ol>
+                                        <li><b><u>Fund Expenditure</u></b></li>
+                                        <ol type="1">
+                                            
+                                            <li><a href="avg_wage_paid.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Average wage paid pattern during the year </u></a>
+                                            </li>
+                                            
+                                            <li><a href="state_html/executive_agency_report_new.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Labour ,Material Ratio
+                                                    Analysis </u></a></li>
+                                            
+                                            <li><a href="state_html/nil_exp.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>NO of GP With Nil Expenditure </u></a></li>
+                                            
+                                        </ol>
+                                        <li><b><u>Administrative Expenditure</u></b></li>
+                                        <ol type="1">
+                                            <li><a href="citizen_html/nationalAdmExp.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Administrative Expenditure
+                                                </u></a></li>
+                                        </ol>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingEight">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseEight" aria-expanded="true" aria-controls="collapseEight">R8.e-FMS
+                                        Reports </a>
+                                </h4>
+                            </div>
+                            <div id="collapseEight" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        <li><b><u>FTO</u></b></li>
+                                        <ol type="1">
+                                            
+                                            <li><a href="FTO/FTOReport.aspx?page=s&mode=B&flg=W&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&dstyp=B&source=national&Digest=omF+6+NTlmiw91LmIInmpg" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>FTO Status Report </u></a></li>
+                                            
+                                            <li><a href="FTO/FTO.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&Digest=cT/J7ChEq5LOfEr0AmsuAQ" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Daily Squaring of FTO'S </u></a></li>
+                                            
+                                            <li><a href="FTO/ftoPartiallyProcessed.aspx?flg=adm&finyear=2017-2018&source=national&Digest=NO30Jl8Xtapv13Yp0AudlA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>FTO Partially Processed Report</u></a></li>
+                                            
+                                            <li><a href="FTO/FTO_amt_cr.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Partial Paid FTO Status Report</u></a></li>
+                                            
+                                            <li><a href="rej_trans_track.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Rejected Wage Transaction Reconciliation</u></a></li>
+                                            
+                                            <li><a href="Reject_Tran_Reconciliation.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Transaction Pending Reconciliation </u></a>
+                                            </li>
+                                        </ol>
+                                        <li><b><u>FTO Pendency</u></b></li>
+                                        <ol type="1">
+                                            <li><a href="FTO/fto_bnkwise.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>FTO Pendency DayWise Report </u></a></li>
+                                            
+                                            <li><a href="FTO/coop_fto_dtl.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&Digest=cT/J7ChEq5LOfEr0AmsuAQ" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>FTO Pending With Co-operative Bank </u></a>
+                                            </li>
+                                            
+                                        </ol>
+                                        <li><b><u>Account Frozen Status</u></b></li>
+                                        <ol type="1">
+                                            <li><a href="state_html/ACCfreezed.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Status of Worker Account Frozen </u></a></li>
+                                            
+                                            <li><a href="state_html/freez_vendor_rpt.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Vendor Information Frozen
+                                                    Status </u></a></li>
+                                            
+                                            <li><a href="state_html/skillwrker_efms.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Skilled Semi-Skilled
+                                                    Worker's Frozen Status</u></a></li>
+                                            
+                                            <li><a href="state_html/wrk_cat_freeze.aspx?page=S&short_name=UT&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=4qWW12u8XfWSTaTMeS52+Q" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>DPR Frozen Status Report</u></a></li>
+                                            
+                                            <li><a href="IFSC_status.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Workers having Account in Co-operative Bank</u></a></li>
+                                            <li><a href="Tax_Paid_GST.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Taxes paid of Financial Year</u></a></li>
+                                            
+                                            <li><a href="Tax_Paid_vendor.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&Digest=cT/J7ChEq5LOfEr0AmsuAQ" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Taxes which have to be paid to vendor (Between 1st
+                                                    July & 17th Nov, 17) FY</u></a></li>
+                                            
+                                        </ol>
+                                        <li><b><u>e-FMS Monitoring System</u></b></li>
+                                        <ol type="1">
+                                            
+                                            <li><a href="state_html/weekwise_efms_rpt.aspx?DBT=&page=S&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&Digest=HMXyhL8fgGRkqn00AhzlZQ" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Amount Disbursed Through
+                                                    e-FMS </u></a></li>
+                                            
+                                            <li><a href="state_html/efms_detail.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Status of EFMS Implementation</u></a></li>
+                                            
+                                            <li><a href="transaction_proc_tm_rpt.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Transaction Processing Time</u></a></li>
+                                        </ol>
+                                        <li><b><u>Aadhar Based Payment</u></b></li>
+                                        <ol type="1">
+                                            
+                                            <li><a href="state_html/trans_aadhaar_paynew.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Aadhar Based Payment
+                                                    Report</u></a></li>
+                                            
+                                        </ol>
+                                        <li><b><u>PFMS Window</u></b></li>
+                                        <ol type="1">
+                                            
+                                            <li><a href="pfms_response_new.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&Digest=cT/J7ChEq5LOfEr0AmsuAQ" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Status of FTO Transaction Processed Through PFMS Window</u></a></li>
+                                            
+                                          
+                                            <li><a href="pfms_response_latest.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>PFMS Response Status</u></a></li>
+                                         
+                                        </ol>
+                                        <li><b><u>Track FTO</u></b></li>
+                                        <ol type="1">
+                                            <li><a href="https://pfms.nic.in/static/nregaftosearch.aspx" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Track FTO</u></a></li>
+                                        </ol>
+                                        <li><b><u>N-EFMS Window</u></b></li>
+                                        <ol type="1">
+                                            
+                                            <li><a href="pfms_response_nefms.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&Digest=cT/J7ChEq5LOfEr0AmsuAQ" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Status of FTO Transaction Processed Through PFMS Window
+                                                    after N-EFMS implimentation</u></a></li>
+                                            
+                                            <li><a href="PFMS_TRACKING_new.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>N-EFMS FTO Tracking </u></a></li>
+                                            
+                                            <li><a href="pfms_reconciliation.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>PFMS Reconciliation</u></a></li>
+                                            
+                                             </ol>
+                                            
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingNine">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseNine" aria-expanded="true" aria-controls="collapseNine">R9. Social
+                                        Audit </a>
+                                </h4>
+                            </div>
+                            <div id="collapseNine" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ul>
+                                        <li><b><u>R.9.1 Calendar and Completed Audits</u></b></li>
+                                        <ul>
+                                            <li><a href="SocialAuditFindings/SA-Calendar-Report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_blank'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.1.1 Social Audit
+                                                    Calendar</u></a></li>
+                                             <li><a href="SocialAuditFindings/SA-Calendar-AuditCompleted-Report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_blank' style="text-decoration: none" onmouseup='setCounter(this);'>
+                                            <u>R.9.1.2 Social Audit Calendar vs Audits Completed</u></a></li>
+                                            <li><a href="SocialAuditFindings/SA-Verification-data.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_blank' style="text-decoration: none" onmouseup='setCounter(this);'>
+                                            <u>R.9.1.3 Social Audit Verification data</u></a></li>
+                                        </ul>
+                                        <li><b><u>R 9.2 Social Audit Findings</u></b></li>
+                                        <ul>
+                                            <li><a href="SocialAuditFindings/SA-GPReport.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.2.1 Gram Panchayat
+                                                    Social Audit Report</u></a></li>
+                                            <li><a href="SocialAuditFindings/SA-IndividualIssueListReport.aspx" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.2.2 Individual Issues
+                                                    Listing</u></a></li>
+                                            
+                                            <li><a href="SocialAuditFindings/SA_isssues_rpt.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&issue_type_code=all&&state_code=35&fin_year=2017-2018&source=national&Digest=Fbapm3iVsez9xz2Yhdfxbw" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.2.3 Issues Reported
+                                                    (By Category) </u></a></li>
+                                            
+                                            <li><a href="SocialAuditFindings/SAF_issuesub_catwise.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.2.4 Issues Reported
+                                                    (By Sub Category)</u></a></li>
+                                            
+                                            <li><a href="#" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.2.5 Gram panchayat
+                                                    checklist report</u></a></li>
+                                            
+                                            <li><a href="SocialAuditFindings/SA-Conducted-Report.aspx?lflag=&page=s&short_name=&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=l7EYAvvxzzVeqXn3ahyYiQ" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.2.6 Social Audit
+                                                    Conducted Report </u></a></li>
+                                            
+                                            <li><a href="SocialAuditFindings/SA-Upload-Status-Report.aspx?lflag=&page=s&short_name=&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=l7EYAvvxzzVeqXn3ahyYiQ"
+                                                target='_parent' style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.2.7
+                                                    Social Audit Upload Status Report </u></a></li>
+                                            
+                                        </ul>
+                                        <li><b><u>R 9.3 Action Taken Report</u></b></li>
+                                        <ul>
+                                        <li><a href="#" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.3.1 Action Taken Report</u></a></li>
+                                         <li><a href="#" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.3.2 Action Taken Report (by category and sub category)</u></a></li>
+                                        <li><a href="#" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.3.3 Pending Issues Report</u></a></li>
+                                       <li><a href="SocialAuditFindings/SAU_action_taken_report.aspx" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>R.9.3.4 Action Taken Report (National Overview)</u></a>
+                                        </li>
+                                        </ul>
+                                         <li><b><u>R 9.4 SAU Administration</u></b></li>
+                                        <ul>
+                                         <li><a href="SocialAuditFindings/SA_OverallStatusReport.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>R 9.4.1 SAU Status Report </u></a></li>
+                                                 <li><a href="#" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.4.2 SAU Personnel</u></a></li>
+                                    
+                                    
+                                        <li><a href="state_designation_nationalreport.aspx?page=s&type=1&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=SRP&Digest=xMnM0lj0Jar8j6tcApWcWg" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.4.3 SAU Resource Persons Training Report 
+                                            </u></a></li>
+                                        
+                                                </ul>
+                                        <li><b><u>R 9.5 SHG-VRP Report</u></b></li>
+                                        <ul>
+                                        
+                                        <li><a href="SHG-VRP_summaryrpt.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>R.9.5.1 SHG-VRP Summary Report </u></a></li>
+                                        
+                                        <li><a href="SHG_participants_profile1.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>R.9.5.3 SHG-VRP Participant Profile Report </u></a>
+                                        </li>
+                                        
+                                        <li><a href="SHG-course_coordi_profile.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>R.9.5.4 SHG VRP Course Coordinator profile </u></a>
+                                        </li>
+                                        
+                                        </ul>
+                                        <li><b><u>R 9.6 Ombudsperson Report</u></b></li>
+                                        <ul>
+                                        <li><a href="SAU_OmbudsPerson_Details.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Status of Ombudsperson in States </u></a></li>
+                                       
+                                        </ul> 
+                                       
+                                         <li><b><u>R 9.7 Others</u></b></li>
+                                        <ul>
+                                        
+                                        <li><a href="SA_finding_chklist_grmsabha.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.7.1 Gram Sabha Report</u></a></li>
+                                        
+                                        <li><a href="SA_finding_chklist_jobcrdrpt.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.7.2 Job Cards Report </u></a></li>
+                                        
+                                        <li><a href="SA_finding_chklist_trans_ac.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.7.3 Transparency & Accountability
+                                                Report</u></a></li>
+                                        
+                                        <li><a href="SA_finding_chklist_workwages.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.7.4 Work & Wages Report</u></a></li>
+                                        
+                                        <li><a href="SA_finding_chklist_wrksite_facility.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>R.9.7.5 Worksite Facilities Report
+                                                </u></a></li>
+                                        
+                                       
+                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTen">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTen" aria-expanded="true" aria-controls="collapseTen">R10.Grievance
+                                        Redressal </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTen" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        <li><a href="citizen_html/compdetail.aspx?source=national&Digest=nck/Hyo9Jns5wL4J/4pLUg" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Check Redressal of Grievance </u></a></li>
+                                        
+                                        <li><a href="citizen_html/citipoattend_rep.aspx?page=S&state_name=UTTARAKHAND&state_code=35&Digest=EVZj/3eFqakXflpF2mQAJg" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Complaint Register
+                                            </u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingEleven">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseEleven" aria-expanded="true" aria-controls="collapseEleven">R11.Graphical
+                                        Data Analysis </a>
+                                </h4>
+                            </div>
+                            <div id="collapseEleven" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        <li><a href="http://mnregaweb4.nic.in/GRAPH/graphnewxml.aspx?source=national&Digest=nck/Hyo9Jns5wL4J/4pLUg"
+                                            target='_parent' style="text-decoration: none" onmouseup='setCounter(this);'><u>Graphical
+                                                Data Analysis </u></a></li>
+                                        <li><a href="http://mnregaweb4.nic.in/GRAPH/State_graphs_xml.aspx?source=national&Digest=nck/Hyo9Jns5wL4J/4pLUg"
+                                            target='_parent' style="text-decoration: none" onmouseup='setCounter(this);'><u>Graphical
+                                                Data Analysis(State Wise)</u></a></li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTwelve">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTwelve" aria-expanded="true" aria-controls="collapseTwelve">R12.Data
+                                        Status </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwelve" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        <li><a href="Exemp_pay.aspx?source=national&Digest=nck/Hyo9Jns5wL4J/4pLUg" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Panchayats Exempted for Payment through Bank/Post office
+                                            </u></a></li>
+                                        <li><a href="online_status.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Online/Offline data entry status</u></a></li>
+                                        <li><a href="online_status_n.aspx?source=national" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Offline Location of MNREGA Implementation</u></a></li>
+                                        
+                                        <li><a href="show_censuscode.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Census Code Mapping Status</u></a></li>
+                                        
+                                        <li><a href="complete_nrega_location_with_marking.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Block with IPPE,CFT,NRLM
+                                                Intensive ,MKSP,Dark Block ,PMSKY Status</u></a></li>
+                                        <li><a href="PMKSY_report.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>PMKSY Data sharing Report</u></a></li>
+                                        
+                                        <li><a href="state_html/antyodaya_detail.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Mission Antyodaya GP
+                                                Mapping Status</u></a></li>
+                                        
+                                        <li><a href="dynamic_fto_details.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>List of FTO in Queue Pending for Payment</u></a></li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingThirteen">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseThirteen" aria-expanded="true" aria-controls="collapseThirteen">R13.Kaam
+                                        Maango Abhiyaan </a>
+                                </h4>
+                            </div>
+                            <div id="collapseThirteen" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingFourteen">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseFourteen" aria-expanded="true" aria-controls="collapseFourteen">R14.Delay
+                                        Compensation </a>
+                                </h4>
+                            </div>
+                            <div id="collapseFourteen" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="state_html/delay_comp.aspx?rb_mon=Y&page=S&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&rbl=0&Digest=hBo5S3o6PdxD5Gm0yQTj4w" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Delay Compensation </u></a></li>
+                                        
+                                        <li><a href="monthwise_delay_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>No of Musteroll Pending for Payment for more than 15
+                                                Days </u></a></li>
+                                        
+                                        <li><a href="no_of_mrs_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Dashboard for Delay Monitoring System </u></a>
+                                        </li>
+                                        
+                                        <li><a href="Paymentstatus.aspx?page=S&lflag=eng&rb_mode=&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=AD8h5UWBIOObEYr20Cbb2Q" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Status of Timely Payment Monitoring System </u>
+                                        </a></li>
+                                        
+                                        <li><a href="delayed_payment.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Delayed Payment </u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingFifteen">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseFifteen" aria-expanded="true" aria-controls="collapseFifteen">R15.Relative
+                                        Performance </a>
+                                </h4>
+                            </div>
+                            <div id="collapseFifteen" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="st_weightage_drill.aspx?page=s&state_code=35&state_name=UTTARAKHAND&fin_year=2017-2018&Digest=NyYC8oUa8jKCQ4rggLSnBg" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Relative Performance </u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingSixteen">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseSixteen" aria-expanded="true" aria-controls="collapseSixteen">R16.Staff
+                                        Registration </a>
+                                </h4>
+                            </div>
+                            <div id="collapseSixteen" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="Staff_reg_detail_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Staff Registration Report </u></a></li>
+                                        
+                                        <li><a href="Designatio_detail_report.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Designation wise Staff Registration Report </u>
+                                        </a></li>
+                                        <li><a href="functionary_designation.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Total Number of Staff with Aadhaar and Mobile Number
+                                            </u></a></li>
+                                        
+                                        <li><a href="staff_verify_rpt.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Staff Registration and Verification Report </u>
+                                        </a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingSeventeen">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseSeventeen" aria-expanded="true" aria-controls="collapseSeventeen">
+                                        R17.CFT Report </a>
+                                </h4>
+                            </div>
+                            <div id="collapseSeventeen" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="cso_cft/cft_blocks_dtl.aspx?page=s&state_name=UTTARAKHAND&state_code=35&Digest=SLhcOx5kgcafFCZRwzNA3A" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>CFT BLOCKS </u></a></li>
+                                        
+                                        <li><a href="cso_cft/CSO_CFT_report.aspx" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>CFT Details </u></a></li>
+                                        
+                                        <li><a href="cso_cft/cft_panchayats.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Panchayat Coverage </u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingEighteen">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseEighteen" aria-expanded="true" aria-controls="collapseEighteen">R18.Drought/Agriculture/Irrigation
+                                        Related Report </a>
+                                </h4>
+                            </div>
+                            <div id="collapseEighteen" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="work_worker_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>MGNREGS daily report on drought related works (as per
+                                                e-muster issued as on Current Date) </u></a></li>
+                                        
+                                        <li><a href="agri_exp_all_yr.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Works Completed since inception for Agriculture
+                                            </u></a></li>
+                                        
+                                        <li><a href="agri_exp_n.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Works Taken-up in Current year(Spill over+New) for
+                                                Agriculture</u></a></li>
+                                        
+                                        <li><a href="agri_exp_cost_conv.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Shelf of Works of Current Financial Year (Approved/Started)</u></a></li>
+                                        
+                                        <li><a href="states/PV_db.aspx?page=d&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&Digest=5FYmM0BkCJQn0wgIn8LWmg" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Drought Effective Location</u></a></li>
+                                        
+                                        
+                                        <li><a href="drought_affected_data_report.aspx?fin_year=2017-2018&source=national&Digest=w3h8VMbqzt/SypLZlwb6Gw" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Household Completed 100
+                                                days and above in Drought Effected Location</u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingNineteen">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseNineteen" aria-expanded="true" aria-controls="collapseNineteen">R19.DBT
+                                        Reports </a>
+                                </h4>
+                            </div>
+                            <div id="collapseNineteen" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        <li><b><u>Aadhaar Camp Status </u></b></li>
+                                        <ol type="1">
+                                            <li><a href="Camp_calendar_rpt.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Aadhaar Camp Calendar Status </u></a></li>
+                                            <li><a href="adhaarenrollment_consentreport.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Aadhaar Enrollment/Seeding
+                                                    and Consent During Camp (Block wise/GP wise) Report </u></a></li>
+                                            
+                                            <li><a href="Detail_aadhaar_consentnrega.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&Digest=cT/J7ChEq5LOfEr0AmsuAQ" target='_parent'
+                                                style="text-decoration: none" onmouseup='setCounter(this);'><u>Details of Aadhaar Consent
+                                                    Information Entered in NREGASoft </u></a></li>
+                                            
+                                            <li><a href="bankwise_aadhaar_consent.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&Digest=cT/J7ChEq5LOfEr0AmsuAQ" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Bankwise Total No. of Consent Collected as Per Bank
+                                                    Format </u></a></li>
+                                            
+                                            <li><a href="aadhaar_progress_monitor.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                                onmouseup='setCounter(this);'><u>Aadhaar Progress Monitor</u></a></li>
+                                        </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTwenty">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTwenty" aria-expanded="true" aria-controls="collapseTwenty">R20.Report
+                                        for IPPE/IPPE2 </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwenty" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="ippe_blocks_list.aspx?lflag=eng&page=s&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&Digest=HkEulPb/8wrpCquD/QqKRw" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>IPPE Selected Location </u></a></li>
+                                        
+                                        <li><a href="empstatusnewall_ippe.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Physical Financial Progress of IPPE Blocks </u>
+                                        </a></li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTwentyone">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTwentyone" aria-expanded="true" aria-controls="collapseTwentyone">
+                                        R21.Mobile Monitoring System </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwentyone" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="GramPanchayatIdentificationforMMS_n.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Gram Panchayat Identify
+                                                for MMS </u></a></li>
+                                        
+                                        <li><a href="MMS_system_used_modules.aspx?lflag=eng&page=s&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&Digest=HkEulPb/8wrpCquD/QqKRw" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>MMS Data Entry Status </u></a></li>
+                                        
+                                        <li><a href="MMS_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>MMS Monitoring Report </u></a></li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTwentytwo">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTwentytwo" aria-expanded="true" aria-controls="collapseTwentytwo">
+                                        R22. Livelihoods in Full Employment (LIFE) Project </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwentytwo" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        <li><a href="households_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Status of Survey for Skill Training</u></a></li>
+                                        <li><a href="all_lvl_details_dashboard_new.aspx?fin_year=2017-2018&val=life&Digest=gfT6yVwarbeW+IwBV1mamA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Trade wise Analysis of
+                                                Life Survey </u></a></li>
+                                        <li><a href="life/reports/skilling_wages_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Progress under Skilling
+                                                for Wages </u></a></li>
+                                        <li><a href="life/reports/skilling_employment_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Progress under Skilling
+                                                for Self Employment</u></a></li>
+                                        <li><a href="life/reports/skilling_livelihood_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Progress under Livelihood
+                                                Upgradation(FY 2015-16)</u></a></li>
+                                        
+                                        <li><a href="life/reports/srlm_progress_report.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&Digest=cT/J7ChEq5LOfEr0AmsuAQ" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>SRLM Progress under Skilling
+                                                for Wages</u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTwentythree">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTwentythree" aria-expanded="true" aria-controls="collapseTwentythree">
+                                        R23.Barefoot Technician </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwentythree" class="panel-collapse collapse in" role="tabpanel"
+                                aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="bft_trainer.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&Digest=cT/J7ChEq5LOfEr0AmsuAQ" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Barefoot Trainers Database </u></a></li>
+                                        
+                                        <li><a href="BFT_Project_Progress.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Barefoot Technician (BFTs) Project Progress : National
+                                                Overview</u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingtwentyfour">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTwentyfour" aria-expanded="true" aria-controls="collapseTwentyfour">
+                                        R24.GEO MGNREGA </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwentyfour" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree"
+                                onmouseup='setCounter(this);'>
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        <li><a href="geo_mgnrega_flaged_wrk_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Flaged Work Status For
+                                                GEO Tagging</u></a></li>
+                                        <li><a href="assets_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Monitoring Report for Asset Id </u></a></li>
+                                        <li><a href="geo_mgnrega_rpt.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Monitoring Report for GeoMGNREGA Training </u></a>
+                                        </li>
+                                        <li><a href="assets_rpt.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Asset Generation Status against Total Work Completed
+                                            </u></a></li>
+                                        <li><a href="Geomnrega_phase_detail.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>GeoMGNREGA Phase II Reports </u></a></li>
+                                        <li><a href="Geomnrega_phase2_detail.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>GeoMGNREGA-Bhuvan Phase II Reports</u></a></li>
+                                        <li><a href="Assets_Phase1.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>GeoMGNREGA Phase I Reports </u></a></li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTwentyfive">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTwentyfive" aria-expanded="true" aria-controls="collapseTwentyfive">
+                                        R25.Digital Payments </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwentyfive" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="digi_training_report.aspx?type=1&lflag=&page=S&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&Digest=dGS3Io4DlRNfiIFFZsRfXQ" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Training Status</u></a></li>
+                                        
+                                        <li><a href="digi_training_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Location Covered for Digital Payment Training </u>
+                                        </a></li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTwentysix">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTwentysix" aria-expanded="true" aria-controls="collapseTwentysix">
+                                        R26.Focus Area Progress </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwentysix" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="takenup_compwrk_report.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Work Completion status</u></a></li>
+                                        
+                                        <li><a href="master_circular_report.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Master Circular/New Asset Register Status/Seven Register
+                                                Status </u></a></li>
+                                        
+                                        <li><a href="target_reports/Life_Target_rpt.aspx?lflag=eng&fin_year=2017-2018&source=national&labels=labels&Digest=cT/J7ChEq5LOfEr0AmsuAQ" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Livelihoods in Full Employment(LIFE)
+                                                status </u></a></li>
+                                        
+                                        <li><a href="work_target_achieve_report_well.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Progress of DUGWELLS
+                                                and WELL</u></a></li>
+                                        
+                                        <li><a href="state_html/JC_Ver_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Verification of Job cards </u></a></li>
+                                        <li><a href="secc_mapping_status_rpt.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>SECC Mapping Status for Landless Casual Labour
+                                            </u></a></li>
+                                        <li><a href="individual_asset_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Individual Asset Creation </u></a></li>
+                                        <li><a href="water_related_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Water Related Work</u></a></li>
+                                        
+                                        <li><a href="nrm_related_report.aspx?lflag=eng&page=s&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&rbl=0&rbl_nrm=1&rbl_blk=1&&Digest=M+XwsYDxkCQebnhg4+3Z2w" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>NRM Work</u></a></li>
+                                        
+                                        <li><a href="MWC_report.aspx?page=S&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=qN56YRtOVew/WkKkkIzlgA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>NRM Expenditure Analysis</u></a></li>
+                                        
+                                        <li><a href="work_target_achieve_report.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent'
+                                            style="text-decoration: none" onmouseup='setCounter(this);'><u>Focus Areas Work Progress</u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="headingTwentyseven">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion"
+                                        href="#collapseTwentyseven" aria-expanded="true" aria-controls="collapseTwentyseven">
+                                        R27. Saksham Capacity Building </a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwentyseven" class="panel-collapse collapse in" role="tabpanel"
+                                aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    <ol type="1">
+                                        
+                                        <li><a href="STRT_targets_rpt.aspx?page=s&lflag=eng&state_name=UTTARAKHAND&state_code=35&fin_year=2017-2018&source=national&Digest=3PF8ytwSn8kr3W5q2LK7NA" target='_parent' style="text-decoration: none"
+                                            onmouseup='setCounter(this);'><u>Saksham Capacity Building Monitoring Report (DTRT/BTRT)</u></a></li>
+                                        
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <script src='https://code.jquery.com/jquery-2.2.4.min.js'></script>
+    <script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js'></script>
+    <script src="js/misindex.js"></script>
+
+    </div>
+     <div class="clearfix"></div>
+  <div class="footer">
+   <p><span><font color="black"><b>Website content managed by Ministry of Rural Development, GoI: <span>Designed, Developed and Hosted by<a target="_blank" title="NIC, External Link that opens in a new window" href="http://www.nic.in/"> National Informatics Centre</a></b></font></span> </p>
+  <a target="_blank" href="https://www.nic.in/"><img alt="" src="images/nic-logo.png"/></a>
+</div>
+    
+<script type="text/javascript">
+//<![CDATA[
+var Page_Validators =  new Array(document.getElementById("ctl00_ContentPlaceHolder1_rfvtxtCaptcha"));
+//]]>
+</script>
+
+<script type="text/javascript">
+//<![CDATA[
+var ctl00_ContentPlaceHolder1_rfvtxtCaptcha = document.all ? document.all["ctl00_ContentPlaceHolder1_rfvtxtCaptcha"] : document.getElementById("ctl00_ContentPlaceHolder1_rfvtxtCaptcha");
+ctl00_ContentPlaceHolder1_rfvtxtCaptcha.controltovalidate = "ctl00_ContentPlaceHolder1_txtCaptcha";
+ctl00_ContentPlaceHolder1_rfvtxtCaptcha.focusOnError = "t";
+ctl00_ContentPlaceHolder1_rfvtxtCaptcha.errormessage = "Captcha is required ?";
+ctl00_ContentPlaceHolder1_rfvtxtCaptcha.validationGroup = "next";
+ctl00_ContentPlaceHolder1_rfvtxtCaptcha.evaluationfunction = "RequiredFieldValidatorEvaluateIsValid";
+ctl00_ContentPlaceHolder1_rfvtxtCaptcha.initialvalue = "";
+//]]>
+</script>
+
+
+<script type="text/javascript">
+//<![CDATA[
+
+var Page_ValidationActive = false;
+if (typeof(ValidatorOnLoad) == "function") {
+    ValidatorOnLoad();
+}
+
+function ValidatorOnSubmit() {
+    if (Page_ValidationActive) {
+        return ValidatorCommonOnSubmit();
+    }
+    else {
+        return true;
+    }
+}
+        //]]>
+</script>
+</form>
+</body>
+</html>

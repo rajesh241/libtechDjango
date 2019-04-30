@@ -77,8 +77,18 @@ def main():
     cobj=CrawlerObject(cq.id)
     pobj=LocationObject(cobj,code=panchayatCode)
     createCodeObjDict(logger,pobj)
-    obj=getattr(nregamodels,modelName).objects.filter(id=objID).first()
-    getattr(crawlerFunctions,funcName)(logger,pobj,obj)
+    if modelName is not None:
+      if funcName == "dumpDataCSV":
+        getattr(crawlerFunctions,funcName)(logger,pobj,finyear=finyear,modelName=modelName)
+      elif objID is not None:
+        obj=getattr(nregamodels,modelName).objects.filter(id=objID).first()
+        getattr(crawlerFunctions,funcName)(logger,pobj,obj)
+      else:
+        getattr(crawlerFunctions,funcName)(logger,pobj,modelName,finyear)
+    elif finyear is not None:
+      getattr(crawlerFunctions,funcName)(logger,pobj,finyear)
+    else:
+      getattr(crawlerFunctions,funcName)(logger,pobj)
   if args['singleExecute']:
     cqID=args['testInput']
    #cq=CrawlRequest.objects.filter(id=cqID).first()

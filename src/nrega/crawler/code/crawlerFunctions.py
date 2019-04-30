@@ -104,6 +104,7 @@ class LocationObject:
     self.district=blockObj.district
     self.state=blockObj.district.state
     self.blockFilepath="%s/%s/%s/%s/%s/%s/%s" % ("nrega",self.stateSlug,self.districtSlug,self.blockSlug,"DATA","NICREPORTS","filename")
+    self.dataFilepath="%s/%s/%s/%s/%s/%s" % ("DATA",self.stateSlug,self.districtSlug,self.blockSlug,"foldername","filename")
     self.error=False
     self.displayName=f'{self.blockID}-{self.blockCode}-{self.blockName}'
     if self.locationType=='panchayat':
@@ -280,6 +281,12 @@ def crawlNICPanchayat(logger,lobj,downloadStage=None):
           accuracy=curAccuracy
         elif curAccuracy <= accuracy:
           accuracy=curAccuracy
+
+      elif (downloadStage =="dumpDataCSV"):
+        dumpDataCSV(logger,pobj,finyear=finyear,modelName="Worker")
+        dumpDataCSV(logger,pobj,finyear=finyear,modelName="WagelistTransaction")
+        dumpDataCSV(logger,pobj,finyear=finyear,modelName="FTOTransaction")
+        dumpDataCSV(logger,pobj,finyear=finyear,modelName="MusterTransaction")
 
   if accuracy is not None:
     cq=CrawlRequest.objects.filter(id=cobj.id).first()
@@ -576,6 +583,12 @@ def getJobcardRegister(logger,pobj):
   return response.content
 
 def processJobcardRegister(logger,pobj):
+    csvArray=[]
+    locationArrayLabel=["state","district","block","panchayat","village","stateCode","districtCode","blockCode","panchayatCode"]
+    jobcardArrayLabel=["jobcard","headOfHousehold","issue Date","caste","jcNo"]
+    workerArrayLabel=["name","age","gender","fatherHusbandName","isDeleted","isMinority","isDisabled"]
+    a=locationArrayLabel+jobcardArrayLabel+workerArrayLabel
+    csvArray.append(a)
     reportType="applicationRegister"
     finyear=getCurrentFinYear()
     error,myhtml=getReportHTML(logger,pobj,reportType,finyear)
@@ -642,6 +655,7 @@ def processJobcardRegister(logger,pobj):
             myJobcard.applicationDate=applicationDate
             myJobcard.jcNo=getjcNumber(jobcard)
             myJobcard.save()
+            jobcardArray=[jobcard,headOfHousehold,str(issueDate),caste,str(getjcNumber(jobcard))]
             code=jobcard
           else:
             applicantNo=applicantNo+1
@@ -665,6 +679,11 @@ def processJobcardRegister(logger,pobj):
           myWorker.isMinority=isMinority
           myWorker.remarks=remarks
           myWorker.save()
+          locationArray=[pobj.stateName,pobj.districtName,pobj.blockName,pobj.panchayatName,villageName,pobj.stateCode,pobj.districtCode,pobj.blockCode,pobj.panchayatCode]
+          workerArray=[name,str(age),gender,fatherHusbandName,str(isDeleted),str(isMinority),str(isDisabled)]
+          a=locationArray+jobcardArray+workerArray
+          csvArray.append(a)
+    #dumpDataCSV(pobj,csvArray,"workers","workers_%s.csv" % (pobj.panchayatSlug))
     totalJobcards=len(Jobcard.objects.filter(panchayat=pobj.panchayat))
     totalWorkers=len(Worker.objects.filter(jobcard__panchayat=pobj.panchayat))
     if totalJobcards== 0:
@@ -965,6 +984,9 @@ def updateObjectDownload(logger,obj,error,s3url):
 
 def processWagelist(logger,pobj,obj):
   myhtml=None
+  csvArray=[]
+  labels=['SrNo','stateName','districtName','blockName','panchayatName','stateCode','districtCode','blockCode','panchayatCode','wagelist','jobcard','name','ftoNo','daysWorked','totalWage']
+  csvArray.append(labels)
   if obj.contentFileURL is not None:
     r=requests.get(obj.contentFileURL)
     if r.status_code==200:
@@ -1041,6 +1063,7 @@ def processWagelist(logger,pobj,obj):
     obj.downloadAttemptCount=0
     obj.remarks=remarks
     obj.save()
+    #dumpDataCSV(pobj,csvArray,"wagelistTransactions","%s.csv" % (obj.wagelistNo))
 
 def getDownloadObjects(logger,pobj,modelName,finyear):
   if modelName=="Jobcard":
@@ -1224,6 +1247,7 @@ def downloadFTO(logger,pobj,obj):
 
 def processFTO(logger,pobj,obj):
   myhtml=None
+  csvArray=[]
   if obj.contentFileURL is not None:
     r=requests.get(obj.contentFileURL)
     if r.status_code==200:
@@ -1766,7 +1790,7 @@ def processMuster(logger,pobj,obj):
           workerCode="%s_%s" % (jobcard,name)
           wagelistCode="%s_%s_%s" % (pobj.blockCode,finyear,wagelistNo)
           musterCode="%s_%s_%s" % (pobj.blockCode,finyear,obj.musterNo)
-          logger.info(workerCode)
+          #logger.info(workerCode)
           try:
             myWorker=pobj.codeObjDict[workerCode]
           except:
@@ -1784,8 +1808,8 @@ def processMuster(logger,pobj,obj):
             isComplete=False
           wd=None
           
-          logger.info(f"My worker si { myWorker }")
-          logger.info(f"My Wagelist is { myWagelist }")
+          #logger.info(f"My worker si { myWorker }")
+          #logger.info(f"My Wagelist is { myWagelist }")
           if myWorker is not None:
             wd=WorkPayment.objects.filter(muster=obj,worker=myWorker).first()
           if wd is not None:
@@ -1804,7 +1828,7 @@ def processMuster(logger,pobj,obj):
             wd.creditedDate=creditedDate
             wd.remarks=wdRemarks
             wd.save()
-            logger.info("Saving WD ID %s " % (str(wd.id)))
+            #logger.info("Saving WD ID %s " % (str(wd.id)))
           else:
             e="worker %s muster %s not found" % (str(myWorker),str(obj))
             remarks+=e
@@ -2635,8 +2659,9 @@ def createDetailWorkPaymentReport(logger,pobj,finyear,reportObjs=None,filename=N
     filepath=pobj.panchayatFilepath.replace("filename",filename)
     contentType="text/csv"
     savePanchayatReport(logger,pobj,finyear,reportType,outcsv,filepath,contentType=contentType)
-    with open("/tmp/%s" % filename,"wb") as f:
-      f.write(outcsv)
+    #Saving Reports to data folder for athena Analysis
+    filepath=pobj.dataFilepath.replace("foldername","detailReport").replace("filename",filename)
+    s3url=uploadReportAmazon(filepath,outcsv,contentType)
         
     outhtml=''
     outhtml+=array2HTMLTable(table)
@@ -2690,7 +2715,90 @@ def computePercentage(num,den):
   else:
     return int(num*100/den)
 
+def doubleArray2CSV(pobj,csvArray,foldername,filename):
+  f = BytesIO()
+  f.write(u'\ufeff'.encode('utf8'))
+  w = csv.writer(f, encoding='utf-8-sig',delimiter=',',
+                lineterminator='\r\n',
+                quotechar = '"'
+                )
+  for row in csvArray:
+    w.writerow(row)
+  outcsv=f.getvalue()
+  filepath=pobj.dataFilepath.replace("foldername",foldername).replace("filename",filename)
+  contentType="text/csv"
+  s3url=uploadReportAmazon(filepath,outcsv,contentType)
 
+
+def dumpDataCSV(logger,pobj,finyear=None,modelName=None):
+  if modelName == "Worker":
+    csvArray=[]
+    locationArrayLabel=["state","district","block","panchayat","village","stateCode","districtCode","blockCode","panchayatCode"]
+    jobcardArrayLabel=["jobcard","headOfHousehold","issue Date","caste","jcNo"]
+    workerArrayLabel=["name","age","gender","fatherHusbandName","isDeleted","isMinority","isDisabled"]
+    a=locationArrayLabel+jobcardArrayLabel+workerArrayLabel
+    csvArray.append(a)
+    workers=Worker.objects.filter(jobcard__panchayat=pobj.panchayat)
+    for eachWorker in workers:
+      locationArray=[pobj.stateName,pobj.districtName,pobj.blockName,pobj.panchayatName,eachWorker.jobcard.village.name,pobj.stateCode,pobj.districtCode,pobj.blockCode,pobj.panchayatCode]
+      jobcardArray=[eachWorker.jobcard.jobcard,eachWorker.jobcard.headOfHousehold,str(eachWorker.jobcard.applicationDate),eachWorker.jobcard.caste,str(getjcNumber(eachWorker.jobcard.jobcard))]
+      workerArray=[eachWorker.name,str(eachWorker.age),eachWorker.gender,eachWorker.fatherHusbandName,str(eachWorker.isDeleted),str(eachWorker.isMinority),str(eachWorker.isDisabled)]
+      a=locationArray+jobcardArray+workerArray
+      csvArray.append(a)
+    doubleArray2CSV(pobj,csvArray,"workers","workers_%s.csv" % (pobj.panchayatSlug))
+
+  if modelName == "WagelistTransaction":
+    csvArray=[]
+    labels=['stateName','districtName','blockName','panchayatName','stateCode','districtCode','blockCode','panchayatCode','wagelist','jobcard','name','ftoNo','daysWorked','totalWage']
+    csvArray.append(labels)
+    wts=WagelistTransaction.objects.filter(worker__jobcard__panchayat=pobj.panchayat,wagelist__finyear=finyear)
+    for wt in wts:
+      if wt.fto is not None:
+        ftoNo=wt.fto.ftoNo
+      else:
+        ftoNo=''
+      a=[pobj.stateName,pobj.districtName,pobj.blockName,pobj.panchayatName,pobj.stateCode,pobj.districtCode,pobj.blockCode,pobj.panchayatCode,wt.wagelist.wagelistNo,wt.worker.jobcard,wt.worker.name,ftoNo,wt.daysWorked,wt.totalWage]
+      csvArray.append(a)
+    doubleArray2CSV(pobj,csvArray,"wagelistTransactions","%s_%s_%s.csv" % (pobj.panchayatSlug,modelName,finyear))
+
+  if modelName == "MusterTransaction":
+    csvArray=[]
+    locationLabel=['stateName','districtName','blockName','panchayatName','stateCode','districtCode','blockCode','panchayatCode']
+    workDetailArrayLabel=["workDetailID","DemandDate","daysDemanded","daysAllocated","demandExists","daysWorked","dayWage","totalWage","accountNo","bankName","branchName","branchCode","creditedDate"]
+    musterArrayLabel=["musterID","musterNo","workCode","workname","dateFrom","dateTo","paymentDate"]
+    workerArrayLabel=["name"]
+    jobcardArrayLabel=["jobcard"]
+    labels=locationLabel+jobcardArrayLabel+workerArrayLabel+musterArrayLabel+workDetailArrayLabel
+    csvArray.append(labels)
+    wps=WorkPayment.objects.filter(finyear=finyear,worker__jobcard__panchayat=pobj.panchayat)
+    for wd in wps:
+      locationArray=[pobj.stateName,pobj.districtName,pobj.blockName,pobj.panchayatName,pobj.stateCode,pobj.districtCode,pobj.blockCode,pobj.panchayatCode]
+      workerArray=[""]*1
+      jobcardArray=[""]*1
+      if wd.worker is not None:
+        workerArray=[wd.worker.name]
+        jobcardArray=[wd.worker.jobcard.jobcard]
+      musterArray=[""]*7
+      if wd.muster is not None:
+        musterArray=[str(wd.muster.id),str(wd.muster.musterNo),str(wd.muster.workCode),str(wd.muster.workName),str(wd.muster.dateFrom),str(wd.muster.dateTo),str(wd.muster.paymentDate)] 
+      wdArray=[str(wd.id),str(wd.workDemandDate),str(wd.daysDemanded),str(wd.daysAllocated),str(wd.demandExists),str(wd.daysWorked),str(wd.dayWage),str(wd.totalWage),wd.accountNo,wd.bankName,wd.branchName,wd.branchCode,str(wd.creditedDate)]
+      a=locationArray+jobcardArray+workerArray+musterArray+wdArray
+      csvArray.append(a)
+    doubleArray2CSV(pobj,csvArray,"musterTransactions","%s_%s_%s.csv" % (pobj.panchayatSlug,modelName,finyear))
+       
+  if modelName == "FTOTransaction":
+    csvArray=[]
+    fts=PaymentTransaction.objects.filter(jobcard__panchayat=pobj.panchayat,fto__finyear=finyear)
+    labels=['stateName','districtName','blockName','panchayatName','stateCode','districtCode','blockCode','panchayatCode','fto','wagelist','jobcard','secondSignatoryDate','status','creditedAmount','referenceNo','transactionDate','processDate','rejectionReason','primaryAccountHolder','favorBankAPB','IINBankAPB']
+    csvArray.append(labels)
+    for ft in fts:
+      if ft.wagelist is not None:
+        wagelistNo=ft.wagelist.wagelistNo
+      else:
+        wagelistNo=''
+      a=[pobj.stateName,pobj.districtName,pobj.blockName,ft.jobcard.panchayat.name,pobj.stateCode,pobj.districtCode,pobj.blockCode,ft.jobcard.panchayat.code,ft.fto.ftoNo,wagelistNo,ft.jobcard.jobcard,str(ft.fto.secondSignatoryDate),ft.status,ft.creditedAmount,ft.referenceNo,str(ft.transactionDate),str(ft.processDate),ft.rejectionReason,ft.primaryAccountHolder,ft.favorBankAPB,ft.IINBankAPB]
+      csvArray.append(a)
+    doubleArray2CSV(pobj,csvArray,"ftoTransactions","%s_%s_%s.csv" % (pobj.panchayatSlug,modelName,finyear))
 
 def findMissingFTO(logger,pobj,obj):
   fts=PaymentTransaction.objects.filter(wagelist=obj.wagelist,jobcard=obj.worker.jobcard)

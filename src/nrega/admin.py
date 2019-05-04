@@ -73,7 +73,7 @@ class panchayatStatModelAdmin(admin.ModelAdmin):
 class crawlRequestModelAdmin(admin.ModelAdmin):
   actions=[resetAttemptCount,setInProgress,resetInProgress]
   list_display = ["id","__str__","crawlState","inProgress","processName","priority","attemptCount","modified"]
-  readonly_fields=["panchayat","block","startFinYear","progress"]
+  readonly_fields=["panchayat","block","progress"]
   list_filter=["source","inProgress","crawlState__name","attemptCount","panchayat__block__district__state__name"]
   search_fields=["panchayat__code"]
 class crawlStateModelAdmin(admin.ModelAdmin):

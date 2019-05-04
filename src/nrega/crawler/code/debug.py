@@ -55,6 +55,7 @@ def argsFetch():
   parser.add_argument('-t', '--test', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=1)
   parser.add_argument('-t1', '--test1', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=1)
   parser.add_argument('-ti', '--testInput', help='Test Input', required=False)
+  parser.add_argument('-sf', '--startFinYear', help='Test Input', required=False)
   parser.add_argument('-ti2', '--testInput2', help='Test Input', required=False)
   parser.add_argument('-f', '--finyear', help='Test Input', required=False)
 
@@ -79,6 +80,7 @@ def main():
     createCodeObjDict(logger,pobj)
     if modelName is not None:
       if funcName == "dumpDataCSV":
+        logger.info("I amhere")
         getattr(crawlerFunctions,funcName)(logger,pobj,finyear=finyear,modelName=modelName)
       elif objID is not None:
         obj=getattr(nregamodels,modelName).objects.filter(id=objID).first()
@@ -146,13 +148,17 @@ def main():
             logger.info(myWorker.id)
             myWorker.save()
   if args['populate']:
+    if args['startFinYear'] is not None:
+      startFinYear=args['startFinYear']
+    else:
+      startFinYear='18'
     code=args['testInput']
     if len(code) == 10:
       obj=Panchayat.objects.filter(code=code).first()
-      CrawlRequest.objects.create(panchayat=obj,startFinYear='18')
+      CrawlRequest.objects.create(panchayat=obj,startFinYear=startFinYear)
     elif len(code) == 7:
       obj=Block.objects.filter(code=code).first()
-      CrawlRequest.objects.create(block=obj,startFinYear='18')        
+      CrawlRequest.objects.create(block=obj,startFinYear=startFinYear)        
   logger.info("...END PROCESSING") 
   exit(0)
 if __name__ == '__main__':

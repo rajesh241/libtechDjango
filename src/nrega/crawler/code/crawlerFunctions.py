@@ -345,7 +345,7 @@ def getPanchayatStats(logger,pobj,finyear):
   urlPrefix="http://mnregaweb4.nic.in/netnrega/citizen_html/"
   reportType="nicStatHTML"
   reportName="Block Statistics"
-  error="unable to save report"
+  logger.info("MRU is %s " % str(mru))
   if mru is not None:
     url=mru.demandRegisterURL
     logger.info(url)
@@ -813,7 +813,10 @@ def getFTOListURLs(logger,pobj,finyear):
         s="block_code=%s&fin_year=%s&typ=sec_sig" % (pobj.blockCode,fullFinYear)
         myhtml=r.content
         htmlsoup=BeautifulSoup(myhtml,"lxml")
-        validation = htmlsoup.find(id='__EVENTVALIDATION').get('value')
+        try:
+          validation = htmlsoup.find(id='__EVENTVALIDATION').get('value',None)
+        except:
+          validation=''
         viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
         a=htmlsoup.find("a", href=re.compile(s))
         if a is not None:
@@ -2330,7 +2333,10 @@ def getJobcardStat(logger,pobj,finyear):
     if r.status_code ==200:
       myhtml=r.content
       htmlsoup=BeautifulSoup(myhtml,"lxml")
-      validation = htmlsoup.find(id='__EVENTVALIDATION').get('value')
+      try:
+        validation = htmlsoup.find(id='__EVENTVALIDATION').get('value')
+      except:
+        validation=''
       viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
       cookies=session.cookies
       logger.info('Cookies: ' + str(cookies)) #  + '==' + r.text)
@@ -2760,6 +2766,15 @@ def dumpDataCSV(logger,pobj,finyear=None,modelName=None):
       a=[pobj.stateName,pobj.districtName,pobj.blockName,pobj.panchayatName,pobj.stateCode,pobj.districtCode,pobj.blockCode,pobj.panchayatCode,wt.wagelist.wagelistNo,wt.worker.jobcard,wt.worker.name,ftoNo,wt.daysWorked,wt.totalWage]
       csvArray.append(a)
     doubleArray2CSV(pobj,csvArray,"wagelistTransactions","%s_%s_%s.csv" % (pobj.panchayatSlug,modelName,finyear))
+  if modelName == "rejectedTransaction":
+    csvArray=[]
+    a=["primaryAccountHolder","fto","wagelist","bankCode","ifscCode","amount","rejectionReason","rejectionDate"]
+    csvArray.append(a)
+    rps=RejectedPayment.objects.filter(block=pobj.block,finyear=finyear)
+    for rp in rps:
+      a=[rp.primaryAccountHolder,rp.ftoString,rp.wagelistString,rp.bankCode,rp.ifscCode,str(rp.amount),rp.rejectionReason,str(rp.rejectionDate)]
+      csvArray.append(a)
+    doubleArray2CSV(pobj,csvArray,"rejectedTransactions","%s_%s_%s.csv" % (pobj.blockSlug,modelName,finyear))
 
   if modelName == "MusterTransaction":
     csvArray=[]

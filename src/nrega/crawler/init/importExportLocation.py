@@ -14,7 +14,7 @@ from django.db.models import F,Q,Sum,Count
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", djangoSettings)
 django.setup()
 
-from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue
+from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlState
 
 def argsFetch():
   '''
@@ -132,24 +132,22 @@ def main():
       p['isNIC']=eachState.isNIC
       p['stateShortCode']=eachState.stateShortCode
       d[eachState.code]=p
-    with open('/tmp/states.json', 'w') as f:
+    with open('states.json', 'w') as f:
       json.dump(d, f, ensure_ascii=False)
       
     crawlStates=CrawlState.objects.all()
     d=dict()
     for cs in crawlStates:
       p=dict()
-      if cs.modelName is None:
-        modelName="Panchayat"
-      else:
-        modelName=cs.modelName
-      p['modelName']=modelName
+      p['name']=cs.name
       p['sequene']=cs.sequence
-      p['crawlType']=cs.crawlType
-      p['processType']=cs.processType
+      p['minhour']=cs.minhour
+      p['maxhour']=cs.maxhour
+      p['isBlockLevel']=cs.isBlockLevel
+      p['needFullBlockData']=cs.needFullBlockData
       p['iterateFinYear']=cs.iterateFinYear
       d[cs.name]=p
-    with open('/tmp/crawlStates.json', 'w') as f:
+    with open('crawlStates.json', 'w') as f:
       json.dump(d, f, ensure_ascii=False)
 
     exit(0)

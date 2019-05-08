@@ -66,6 +66,17 @@ def main():
       logger.info("Json file name is %s " % (jsonName))
       json_data=open(jsonName,encoding='utf-8-sig').read()
       d = json.loads(json_data)
+      if name=='crawlState':
+        for key,values in d.items():
+          name=key
+          obj=CrawlState.objects.filter(name=name).first()
+          if obj is None:
+            obj=CrawlState.objects.create(name=name)
+          logger.info(name)
+          for fieldName,fieldValue in values.items():
+            setattr(obj,fieldName,fieldValue)
+          obj.save()
+        
       if name=='panchayat':
         for key,values in d.items():
           panchayatCode=key
@@ -140,7 +151,7 @@ def main():
     for cs in crawlStates:
       p=dict()
       p['name']=cs.name
-      p['sequene']=cs.sequence
+      p['sequence']=cs.sequence
       p['minhour']=cs.minhour
       p['maxhour']=cs.maxhour
       p['isBlockLevel']=cs.isBlockLevel

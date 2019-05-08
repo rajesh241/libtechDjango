@@ -302,6 +302,9 @@ def crawlNICPanchayat(logger,lobj,downloadStage=None):
         elif curAccuracy <= accuracy:
           accuracy=curAccuracy
 
+      elif (downloadStage =="telanganaGenerateReports"):
+        createDetailWorkPaymentReportAP(logger,pobj,finyear)
+
       elif (downloadStage =="dumpDataCSV"):
         dumpDataCSV(logger,pobj,finyear=finyear,modelName="Worker")
         dumpDataCSV(logger,pobj,finyear=finyear,modelName="WagelistTransaction")
@@ -316,7 +319,7 @@ def crawlNICPanchayat(logger,lobj,downloadStage=None):
   if nextCrawlState is not None:
     cq=CrawlRequest.objects.filter(id=cobj.id).first()
     cq.crawlState=nextCrawlState
-    if nextCrawlState.name == "complete":
+    if ( (nextCrawlState.name == "complete") or (nextCrawlState.name == "telanganaComplete")):
       cq.isComplete=True
     cq.save() 
   return error

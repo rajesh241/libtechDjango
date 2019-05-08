@@ -1,9 +1,13 @@
+import codecs
+from contextlib import closing
 import requests
+import xlrd
 import collections
 import traceback
 import logging
 from io import BytesIO
 import unicodecsv as csv
+import csv as oldcsv
 from urllib import parse
 from queue import Queue
 from threading import Thread
@@ -32,7 +36,7 @@ django.setup()
 from nrega import models as nregamodels
 from nrega.crawler.commons.nregaFunctions import getCurrentFinYear,stripTableAttributes,getCenterAlignedHeading,htmlWrapperLocal,getFullFinYear,correctDateFormat,table2csv,array2HTMLTable,getDateObj,stripTableAttributesPreserveLinks,getFinYear
 from nrega.crawler.commons.nregaSettings import statsURL,telanganaStateCode,crawlerTimeThreshold,delayPaymentThreshold,crawlerErrorTimeThreshold
-from nrega.crawler.code.commons import savePanchayatReport,uploadReportAmazon,getjcNumber,isReportUpdated,getReportHTML,validateAndSave,validateNICReport
+from nrega.crawler.code.commons import savePanchayatReport,uploadReportAmazon,getjcNumber,isReportUpdated,getReportHTML,validateAndSave,validateNICReport,csv_from_excel
 from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Jobcard,PanchayatCrawlInfo,Worker,PanchayatStat,Village,Wagelist,FTO,WagelistTransaction,JobcardStat,DPTransaction,FTOTransaction,APWorkPayment,Report,WorkerStat,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,CrawlRequest,CrawlState,PaymentTransaction,WorkPayment
 from nrega.crawler.code.delayURLs import delayURLs
 
@@ -62,6 +66,7 @@ class CrawlerObject:
     self.needFullBlockData=cq.crawlState.needFullBlockData
     self.iterateFinYear=cq.crawlState.iterateFinYear
     self.attemptCount=cq.attemptCount
+    self.remarks=''
     if cq.panchayat is not None:
       self.locationCode=cq.panchayat.code
     else:
@@ -125,7 +130,7 @@ def crawlerMain(logger,cqID,downloadStage=None):
     if pobj.error == False:
       logger.info("No Error Found")
       try:
-        if pobj.stateCode == telanganaStateCode:
+        if pobj.stateCode == '00':
           error=crawlFullPanchayatTelangana(logger,pobj)
         else:
           error=crawlNICPanchayat(logger,pobj,downloadStage=downloadStage)
@@ -146,6 +151,7 @@ def crawlerMain(logger,cqID,downloadStage=None):
       cq.attemptCount=attemptCount
     #  cq.crawlDuration=crawlDuration
       cq.crawlAttempDate=timezone.now()
+      cq.remarks=cobj.remarks
       cq.save()
 
 
@@ -216,6 +222,12 @@ def crawlNICPanchayat(logger,lobj,downloadStage=None):
         if error is not None:
           return error
 
+      elif (downloadStage == "telanganaJobcardRegister"):
+        error=jobcardRegisterTelangana(logger,pobj) 
+        if error is not None:
+          return error
+
+
       elif (downloadStage == "crawlFTO"):
         error=crawlFTORejectedPayment(logger,pobj,finyear) 
         if error is not None:
@@ -235,13 +247,21 @@ def crawlNICPanchayat(logger,lobj,downloadStage=None):
           return error
         objectProcessMain(logger,pobj,modelName,finyear)
 
-      elif (downloadStage =="downloadJobcards"):
+      elif ( (downloadStage =="downloadJobcards") or (downloadStage=="telanganaDownloadJobcards")):
         modelName="Jobcard"
         error,downloadAccuracy=objectDownloadMain(logger,pobj,modelName,finyear)
         if error is not None:
           return error
         objectProcessMain(logger,pobj,modelName,finyear)
-
+      
+      elif (downloadStage == "telanganaDownloadMusters"):
+        error=telanganaMusterDownload(logger,pobj,finyear)
+        if error is not None:
+          return error
+        error=telanganaMusterProcess(logger,pobj,finyear)
+        if error is not None:
+          return error
+       
       elif (downloadStage =="downloadMusters"):
         modelName="Muster"
         error,downloadAccuracy=objectDownloadMain(logger,pobj,modelName,finyear)
@@ -341,6 +361,7 @@ def downloadPanchayatStat(logger,pobj,finyear):
   return error1,totalEmploymentProvided
 
 def getPanchayatStats(logger,pobj,finyear):
+  error="unable to download Panchayt Stat"
   mru=MISReportURL.objects.filter(state__code=pobj.stateCode,finyear=finyear).first()
   urlPrefix="http://mnregaweb4.nic.in/netnrega/citizen_html/"
   reportType="nicStatHTML"
@@ -507,7 +528,116 @@ def crawlWagelists(logger,pobj,finyear):
     error="Could not fetch Wagelist for finyear %s " % str(finyear)
   return error
 
+def fetchDataTelanganaJobcardRegister(logger,pobj):
+  stateCode='02'
+  urlHome="http://www.nrega.ap.gov.in/Nregs/FrontServlet"
+  urlHome="http://www.nrega.telangana.gov.in/Nregs/FrontServlet"
+  url="http://www.nrega.ap.gov.in/Nregs/FrontServlet?requestType=WageSeekersRH&actionVal=JobCardHolder&page=WageSeekersHome&param=JCHI"
+  url="http://www.nrega.telangana.gov.in/Nregs/FrontServlet?requestType=Common_Ajax_engRH&actionVal=Display&page=commondetails_eng"
+  districtCode=pobj.districtCode[-2:]
+  blockCode=pobj.blockCode[-2:]
+  #districtCode=fullPanchayatCode[2:4]
+  #blockCode=fullPanchayatCode[5:7]
+  panchayatCode=pobj.panchayatCode[8:10]
+  logger.debug("DistrictCode: %s, blockCode : %s , panchayatCode: %s " % (districtCode,blockCode,panchayatCode))
+  headers = {
+    'Host': 'www.nrega.telangana.gov.in',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:54.0) Gecko/20100101 Firefox/54.0',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Accept-Encoding': 'gzip, deflate',
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Referer': url,
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+}
 
+  params = (
+    ('requestType', 'Household_engRH'),
+    ('actionVal', 'view'),
+)
+
+  data = [
+  ('State', '02'),
+  ('District', districtCode),
+  ('Mandal', blockCode),
+  ('Panchayat', panchayatCode),
+  ('Village', '-1'),
+  ('HouseHoldId', ''),
+  ('Go', ''),
+  ('spl', 'Select'),
+  ('input2', ''),
+]
+  url='http://www.nrega.telangana.gov.in/Nregs/FrontServlet'
+  response = requests.post(urlHome, headers=headers, params=params, data=data)
+  cookies = response.cookies
+  logger.debug(cookies)
+      
+  logger.debug(response.cookies)
+  response=requests.post(urlHome, headers=headers, params=params, cookies=cookies, data=data)
+  return response.text
+
+
+def saveJobcardRegisterTelangana(logger,pobj):
+  jobcardPrefix="%s-" % (pobj.stateShortCode) 
+  finyear=getCurrentFinYear()
+  fullfinyear=getFullFinYear(finyear)
+  error=None
+  reportType="telanganaJobcardRegister"
+  reportName="Telangana Jobcard Register"
+  logger.debug("Saving Jobcard Register for Telangana")
+  fullPanchayatCode=pobj.panchayatCode
+  stateName=pobj.stateName
+  districtName=pobj.districtName
+  blockName=pobj.blockName
+  panchayatName=pobj.panchayatName
+
+  myhtml=fetchDataTelanganaJobcardRegister(logger,pobj)
+  myhtml=myhtml.replace("<tbody>","")
+  myhtml=myhtml.replace("</tbody>","")
+  error=validateAndSave(logger,pobj,myhtml,reportName,reportType,finyear=getCurrentFinYear())
+  return error
+
+def processJobcardRegisterTelangana(logger,pobj):
+  error=None
+  finyear=getCurrentFinYear()
+  reportType="telanganaJobcardRegister"
+  error,myhtml=getReportHTML(logger,pobj,reportType,finyear)
+  if error is None:
+    htmlsoup=BeautifulSoup(myhtml,"lxml")
+    myTable=htmlsoup.find('table',id="myTable")
+    rows=myTable.findAll("tr")
+    for row in rows:
+      if pobj.jobcardPrefix in str(row):
+        cols=row.findAll('td')
+        tjobcard=cols[1].text.lstrip().rstrip()
+        jobcard=cols[2].text.lstrip().rstrip()
+        headOfHousehold=cols[3].text.lstrip().rstrip()
+        caste=cols[5].text.lstrip().rstrip()
+        issueDateString=cols[4].text.lstrip().rstrip()
+        issueDate=correctDateFormat(issueDateString)
+        code=jobcard
+        logger.info(jobcard)
+        try:
+          myJobcard=Jobcard.objects.create(jobcard=jobcard,panchayat=pobj.panchayat)
+        except:
+          myJobcard=Jobcard.objects.filter(jobcard=jobcard,panchayat=pobj.panchayat).first()
+        myJobcard.tjobcard=tjobcard
+        myJobcard.headOfHousehold=headOfHousehold
+        myJobcard.caste=caste
+        myJobcard.applicationDate=issueDate
+        myJobcard.jcNo=getjcNumber(jobcard)
+        myJobcard.save()
+  return error
+
+
+def jobcardRegisterTelangana(logger,pobj):
+  error=saveJobcardRegisterTelangana(logger,pobj)
+  if error is not None:
+    return error
+  error=processJobcardRegisterTelangana(logger,pobj)
+  if error is not None:
+    return error
 def jobcardRegister(logger,pobj):
   reportType="applicationRegister"
   reportName="Application Register"
@@ -1323,6 +1453,154 @@ def processFTO(logger,pobj,obj):
     obj.allJobcardFound=allJobcardFound
     obj.isComplete=isComplete
     obj.save()
+
+def fetchJobcardTelangana(logger,tjobcard):
+  url='http://www.nrega.telangana.gov.in/Nregs/'
+  response=requests.get(url)
+  cookies = response.cookies
+
+  #logger.debug(response.cookies)
+
+  headers = {
+    'Host': 'www.nrega.telangana.gov.in',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-GB,en;q=0.5',
+    'Accept-Encoding': 'gzip, deflate',
+    'Referer': 'http://www.nrega.telangana.gov.in/Nregs/',
+    'Connection': 'keep-alive',
+    'Content-Type': 'application/x-www-form-urlencoded',
+  }
+
+  params = (
+    ('requestType', 'HouseholdInf_engRH'),
+    ('actionVal', 'SearchJOBNew'),
+  )
+
+  data = {
+  'input2': tjobcard
+  }
+
+  response = requests.post('http://www.nrega.telangana.gov.in/Nregs/FrontServlet', headers=headers, params=params, cookies=cookies, data=data)
+
+  return response.text
+
+def fetchPaymentInformationTelangana(logger,obj):
+  myhtml=None
+  headers = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate',
+    'Accept-Language': 'en-GB,en;q=0.5',
+    'Connection': 'keep-alive',
+    'Host': 'www.nrega.telangana.gov.in',
+    'Referer': 'http://www.nrega.telangana.gov.in/Nregs/FrontServlet?requestType=HouseholdInf_engRH&actionVal=SearchJOBNew',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:45.0) Gecko/20100101 Firefox/45.0',
+}
+
+  params = (
+    ('requestType', 'HouseholdInf_engRH'),
+    ('actionVal', 'SearchJOBPayment'),
+    ('JOB_No', obj.tjobcard),
+  )
+
+  response = requests.get('http://www.nrega.telangana.gov.in/Nregs/FrontServlet', headers=headers, params=params)
+  if response.status_code == 200:
+    myhtml=response.content
+  return myhtml
+
+def validateJobcardDataTelangana(logger,myhtml,paymenthtml):
+  habitation=None
+  result = re.search('Habitation(.*)nbsp',myhtml)
+  if result is not None:
+     #logger.debug("Found")
+     searchText=result.group(1)
+     habitation=searchText.replace("&nbsp","").replace(":","").replace(";","").replace("&","").lstrip().rstrip()
+     #logger.debug(habitation)
+  error=None
+  jobcardTable=None
+  workerTable=None
+  aggregateTable=None
+  paymentTable=None
+  error="noError"
+  bs = BeautifulSoup(myhtml, "html.parser")
+  bs = BeautifulSoup(myhtml, "lxml")
+  main1 = bs.find('div',id='main1')
+
+  if main1 != None:
+    table1 = main1.find('table')
+
+    jobcardTable = table1.find('table', id='sortable')
+
+    workerTable = jobcardTable.findNext('table', id='sortable')
+  main2 = bs.find(id='main2')
+  if main2 is not  None:
+    aggregateTable = main2.find('table')
+  main3 = bs.find(id='main3')
+
+  paymentsoup=BeautifulSoup(paymenthtml,"lxml")
+  tables=paymentsoup.findAll("table")
+  for table in tables:
+    if "Epayorder No:" in str(table):
+      paymentTable=table 
+ #if aggregateTable is None:
+ #  error+="Aggregate Table not found"
+ #if paymentTable is None:
+ #  error+="Payment Table not found"
+  if jobcardTable is None:
+    error+="jobcardTable not found"
+  if workerTable is None:
+    error+="WorkerTable not found     " 
+  if paymentTable is None:
+    error+="paymentTable not found"
+  if error == "noError":
+    error=None
+  return error,habitation,jobcardTable,workerTable,paymentTable
+
+
+def telanganaJobcardDownload(logger,pobj,obj):
+    #logger.info("Downloading tjobcard %s " % obj.tjobcard)
+    stateName=pobj.stateName
+    districtName=pobj.districtName
+    blockName=pobj.blockName
+    panchayatName=pobj.panchayatName
+    error="startDownload"
+    downloadCount = 0
+    myhtml=fetchJobcardTelangana(logger,obj.tjobcard)
+    paymenthtml=fetchPaymentInformationTelangana(logger,obj)
+    error,villageName,jobcardTable,workerTable,paymentTable=validateJobcardDataTelangana(logger,myhtml,paymenthtml)
+    #logger.info(villageName)
+    if error is None:
+        
+      try:
+        myVillage=Village.objects.create(panchayat=pobj.panchayat,name=villageName)
+      except:
+        myVillage=Village.objects.filter(panchayat=pobj.panchayat,name=villageName).first()
+      obj.village=myVillage
+      obj.save()
+
+      outhtml=''
+      outhtml+=getCenterAlignedHeading("Jobcard Details")      
+      outhtml+=stripTableAttributes(jobcardTable,"jobcardTable")
+      outhtml+=getCenterAlignedHeading("Worker Details")      
+      outhtml+=stripTableAttributes(workerTable,"workerTable")
+      outhtml+=getCenterAlignedHeading("Aggregate Work Details")      
+   #   outhtml+=stripTableAttributes(aggregateTable,"aggregateTable")
+      outhtml+=getCenterAlignedHeading("Payment Details")      
+      outhtml+=stripTableAttributes(paymentTable,"paymentTable")
+      title="Jobcard Details state:%s District:%s block:%s panchayat: %s jobcard:%s " % (stateName,districtName,blockName,panchayatName,obj.tjobcard)
+      outhtml=htmlWrapperLocal(title=title, head='<h1 aling="center">'+title+'</h1>', body=outhtml)
+      try:
+        outhtml=outhtml.encode("UTF-8")
+      except:
+        outhtml=outhtml
+      myhtml=outhtml
+      filename="%s.html" % (obj.tjobcard)
+      filepath="%s/%s/%s/%s/%s/%s/%s/%s" % ("nrega",pobj.stateSlug,pobj.districtSlug,pobj.blockSlug,pobj.panchayatSlug,"DATA","JOBCARDS",filename)
+      contentType="text/html"
+      s3url=uploadReportAmazon(filepath,outhtml,contentType)
+      logger.info(s3url)
+    obj=Jobcard.objects.filter(id=obj.id).first()
+    updateObjectDownload(logger,obj,error,s3url)
+
 
 def downloadJobcard(logger,pobj,obj):
   error=None
@@ -2823,15 +3101,369 @@ def findMissingFTO(logger,pobj,obj):
     myFTO=fts.first().fto
     logger.info(myFTO)
 
+def telanganaMusterProcess(logger,pobj,finyear):
+  dateFormat="%d-%b-%Y"
+  reportType="telanganaMusters"
+  myReport=Report.objects.filter(reportType=reportType,panchayat=pobj.panchayat,finyear=finyear).first()
+  if myReport is not None:
+    url=myReport.reportURL
+    logger.info(url)
+    with closing(requests.get(url, stream=True)) as r:
+      reader = oldcsv.reader(codecs.iterdecode(r.iter_lines(), 'utf-8'))
+      for row in reader:
+        if len(row) == 18:
+          jobcard=row[0]
+          surname=row[1]
+          caste=row[3].lstrip().rstrip() 
+          payorderDate=getDateObj(row[11],dateFormat=dateFormat)
+          dateTo=getDateObj(row[10],dateFormat=dateFormat)
+          dateFrom=getDateObj(row[9],dateFormat=dateFormat)
+          if ((len(jobcard) == 18) and (surname.lower() != 'total')):
+         # if (((jobcard) == '142000602004010081') and (surname.lower() != 'total')):
+            name=row[2]
+            payorderAmount=row[14]
+           #logger.info(jobcard)
+           #logger.info(surname)
+           #logger.info(row[11])
+           #logger.info(name) 
+            name=name.lstrip().rstrip()
+           # logger.info(payorderDate)
+           # logger.info(payorderAmount)
+            myJobcard=Jobcard.objects.filter(tjobcard=jobcard).first()
+            error=None
+            wps=[]
+            if myJobcard is  None:
+              error=f"Jobcard not found { jobcard } \n"
+              sampleJobcard=Jobcard.objects.filter(panchayat=pobj.panchayat).first()
+              jobcardPrefix=sampleJobcard.jobcard.split("/")[0]
+              jcNo=jobcard[-6:]
+              constructedJobcard="%s/%s" % (jobcardPrefix,jcNo)
+              logger.info("tjobcard %s, Jobcard %s " % (jobcard,constructedJobcard))
+              myJobcard=Jobcard.objects.create(jobcard=jobcard,panchayat=pobj.panchayat,jcNo=jcNo,tjobcard=jobcard,caste=caste)
+              telanganaJobcardDownload(logger,pobj,myJobcard)
+              telanganaJobcardProcess(logger,pobj,myJobcard)
+            if myJobcard is not None:
+              error=None
+              wp=None
+              #logger.info(f"my Jobcard id { myJobcard.id }")
+              wps=APWorkPayment.objects.filter(jobcard__tjobcard=jobcard,dateFrom=dateFrom,payorderDate=payorderDate,name__icontains=name,payorderAmount=payorderAmount)
+              if len(wps) == 1:
+                wp=wps.first()
+              else:
+                wps=APWorkPayment.objects.filter(jobcard__tjobcard=jobcard,dateFrom__isnull=True,payorderDate=payorderDate,name__icontains=name,payorderAmount=payorderAmount)
+                if len(wps) >= 1:
+                  wp=wps.first()
+              if wp is None:
+                error="Length of WP is %s Jobcard ID %s\n" % (str(len(wps)),str(myJobcard.id))
+              else:
+                wp.workCode=row[6].lstrip().rstrip()
+                wp.workName=row[8].lstrip().rstrip()
+                wp.dateFrom=dateFrom
+                wp.dateTo=dateTo
+                wp.isMusterRecordPresent=True
+                finyear=str(getFinYear(dateObj=dateFrom))
+                wp.finyear=finyear
+                wp.save()
+            if error is not None:
+              logger.info(row)
+              logger.info(error)
+              msg=f'Panchayat Code { pobj.panchayatCode } and finyear { finyear }\n'
+              pobj.cobj.remarks+=msg
+              pobj.cobj.remarks+=error
+              pobj.cobj.remarks+=str(row)
+              pobj.cobj.remarks+="---------------------------\n"
+ #error=None
+ #reportType="telanganaMusters"
+ #error1,mycsv=getReportHTML(logger,pobj,reportType,finyear)
+ #if error1 is None:
+ #  reader = oldcsv.reader(mycsv, delimiter=',') 
+ #  logger.info(reader)
+ #  for row in reader:
+ #    logger.info(row)
+def createDetailWorkPaymentReportAP(logger,pobj,finyear):
+  finyear=str(finyear)
+  f = BytesIO()
+  f.write(u'\ufeff'.encode('utf8'))
+  w = csv.writer(f, encoding='utf-8-sig',delimiter=',')
+  reportType="workPaymentAP"
+  a=[]
+  locationArrayLabel=["state","district","block","panchayat","village","stateCode"]
+  jobcardArrayLabel=["jobcardID","jobcard","tjobcard","jcNo","caste","headOfHousehold"]
+  wdLabel=["applicantName","workCode","workName","musterNo","dateFrom","dateTo","daysWorked","accountNo","payorderNo","payorderDate","epayorderno","epayorderDate","payingAgencyDate","creditedDate","disbursedDate","paymentMode","payOrdeAmount","disbursedAmount","isMusterReportFound"]
+  a=locationArrayLabel+jobcardArrayLabel+wdLabel
+  w.writerow(a)
+  workRecords=APWorkPayment.objects.filter(jobcard__panchayat=pobj.panchayat,finyear=finyear).order_by("jobcard__tjobcard","epayorderDate")
+  logger.info("Total Work Records: %s " %str(len(workRecords)))
+  for wd in workRecords:
+    jobcardArray=[""]*6
+    locationArray=[""]*6
+    if wd.jobcard is not None:
+      tjobcard1="~%s" % (wd.jobcard.tjobcard)
+      jobcardArray=[str(wd.jobcard.id),wd.jobcard.jobcard,tjobcard1,wd.jobcard.jcNo,wd.jobcard.caste,wd.jobcard.headOfHousehold]
+      if wd.jobcard.village is not None:
+        villageName=wd.jobcard.village.name
+      else:
+        villageName=''
+      locationArray=[wd.jobcard.panchayat.block.district.state.name,wd.jobcard.panchayat.block.district.name,wd.jobcard.panchayat.block.name,wd.jobcard.panchayat.name,villageName,wd.jobcard.panchayat.block.district.state.stateShortCode]
+    wdArray=[wd.name,wd.workCode,wd.workName,wd.musterNo,str(wd.dateFrom),str(wd.dateTo),str(wd.daysWorked),wd.accountNo,wd.payorderNo,str(wd.payorderDate),wd.epayorderNo,str(wd.epayorderDate),str(wd.payingAgencyDate),str(wd.creditedDate),str(wd.disbursedDate),wd.modeOfPayment,str(wd.payorderAmount),str(wd.disbursedAmount),str(wd.isMusterRecordPresent),str(wd.id)]
+    a=locationArray+jobcardArray+wdArray
+    w.writerow(a)
+  f.seek(0)
+  outcsv=f.getvalue()
+  filename=pobj.panchayatSlug+"_"+str(finyear)+"_wpAP.csv"
+  filepath=pobj.panchayatFilepath.replace("filename",filename)
+  contentType="text/csv"
+  savePanchayatReport(logger,pobj,finyear,reportType,outcsv,filepath,contentType=contentType)
+
+
+def telanganaMusterDownload(logger, pobj,finyear):
+  reportType="telanganaMusters"
+  error=None
+  isUpdated=isReportUpdated(logger,pobj,finyear,reportType)
+  if isUpdated == True:
+    return None
+  else:
+    startYear=int(finyear)-1+2000
+    endYear=int(finyear)+2000
+    startDate="01/04/%s" % str(startYear)
+    endDate="31/03/%s" % str(endYear)
+    logger.info(startDate+endDate)
+    stateCode='02'
+    districtCode=pobj.districtCode[2:]
+    blockCode=pobj.blockCode[5:]
+    panchayatCode=pobj.panchayatCode[8:]
+    logger.info(districtCode+blockCode+panchayatCode)
+    url = 'http://www.nrega.ap.gov.in/Nregs/FrontServlet?requestType=NewReportsRH&actionVal=R1Display&page=Newreportcenter_ajax_eng#'
+    url='http://www.nrega.telangana.gov.in/Nregs/FrontServlet?requestType=Common_engRH&actionVal=musterinfo&page=MusterRolls_eng'
+    url2='http://www.nrega.telangana.gov.in/Nregs/FrontServlet?'
+    logger.info('Fetching URL[%s] for cookies' % url)
+    with requests.Session() as session:
+        response = session.get(url)
+
+        cookies = session.cookies
+
+        logger.info(cookies)
+        '''
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:64.0) Gecko/20100101 Firefox/64.0',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+        }
+
+        params = (
+            ('requestType', 'Common_engRH'),
+            ('actionVal', 'musterinfo'),
+            ('page', 'MusterRolls_eng'),
+        )
+
+        data = {
+            'State': '02',
+            'District': '14',
+            'Mandal': '06',
+            'Panchayat': '12',
+            'FromDate': '01/12/2018',
+            'ToDate': '31/12/2018',
+            'Go': '',
+            'spl': 'Select',
+            'input2': '',
+            'userCaptcha': ''
+        }
+
+        response = session.post(url2,
+                                headers=headers, params=params, cookies=cookies, data=data)
+        '''
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:64.0) Gecko/20100101 Firefox/64.0',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+        }
+
+        params = (
+            ('requestType', 'PaymentsWork_engRH'),
+            ('actionVal', 'musterrolls'),
+            ('page', 'SocialAuditPrint_eng'),
+            ('District', districtCode),
+            ('Mandal', blockCode),
+            ('Panchayat', panchayatCode),
+            ('FromDate', startDate),
+            ('ToDate', endDate),
+            ('exec', 'muster'),
+        )
+
+        data = {
+            'State': stateCode,
+            'District': districtCode,
+            'Mandal': blockCode,
+            'Panchayat': panchayatCode,
+            'FromDate': startDate,
+            'ToDate': endDate,
+            'Go': '',
+            'spl': 'Select',
+            'input2': '',
+            'userCaptcha': ''
+        }
+
+        response = session.post(url2,
+                                headers=headers, params=params, cookies=cookies, data=data)
+        if response.status_code == 200:
+          filename = '/tmp/muster_%s_%s.xlsx' %(pobj.panchayatCode,finyear)
+          csvfilename = '/tmp/muster_%s_%s.csv'% (pobj.panchayatCode,finyear)
+          with open(filename, 'wb') as html_file:
+              logger.info('Writing [%s]' % filename)
+              html_file.write(response.content)
+          csv_from_excel(filename,csvfilename)
+          with open(csvfilename, 'r') as file:
+            csvdata = file.read()
+          filename=pobj.panchayatSlug+"_"+finyear+"_telanganaMusters.csv"
+          filepath=pobj.panchayatFilepath.replace("filename",filename)
+          contentType="text/csv"
+          savePanchayatReport(logger,pobj,finyear,reportType,csvdata,filepath,contentType=contentType)
+        else:
+          error="Unable to download Musters for panchayat %s finyear %s" % (pobj.panchayatSlug,finyear)
+    return error
+
+def telanganaJobcardProcess(logger,pobj,obj):
+  myhtml=None 
+  dateFormat="%d-%b-%Y"
+  if obj.contentFileURL is not None:
+    r=requests.get(obj.contentFileURL)
+    if r.status_code==200:
+        myhtml=r.content
+  if myhtml is not None:
+    htmlsoup=BeautifulSoup(myhtml,"lxml")
+
+
+    workerTable=htmlsoup.find('table',id="workerTable")
+    allApplicantFound=True
+    if  "Relationship" in str(workerTable):
+      #logger.debug("Found the Worker Table")
+      rows=workerTable.findAll('tr')
+      for row in rows:
+        cols=row.findAll('td')
+        if len(cols)>0:
+          applicantNo=cols[1].text.lstrip().rstrip()
+          if applicantNo.isdigit():
+            applicantNo=int(applicantNo)
+          else:
+            applicantNo=0
+          name=cols[2].text.lstrip().rstrip()
+          gender=cols[4].text.lstrip().rstrip()
+          age=cols[3].text.lstrip().rstrip()
+          relationship=cols[5].text.lstrip().rstrip()
+          try:
+            myWorker=Worker.objects.create(jobcard=obj,name=name,applicantNo=applicantNo)
+          except:
+            myWorker=Worker.objects.filter(jobcard=obj,name=name,applicantNo=applicantNo).first()
+          myWorker.gender=gender
+          myWorker.age=age
+          myWorker.relationship=relationship
+          myWorker.save()
+
+    paymentTable=htmlsoup.find('table',id='paymentTable')
+    rows=paymentTable.findAll('tr')
+    for row in rows:
+      cols=row.findAll('td')
+      if len(cols) > 0:
+        workCode=None
+        workName=None
+        payOrderNo=None
+        payOrderDate=None
+        epayOrderNo=None
+        epayOrderDate=None
+        creditedDate=None
+        disbursedDate=None
+        epayorderNo=cols[0].text.lstrip().rstrip()
+       # logger.info(epayorderNo)
+        if epayorderNo.isdigit():
+          ftrNo=cols[1].text.lstrip().rstrip()
+          musterNo=cols[2].text.lstrip().rstrip()
+          musterOpenDateString=cols[3].text.lstrip().rstrip()
+          musterClosureDateString=cols[4].text.lstrip().rstrip()
+          payOrderDate=getDateObj(cols[5].text.lstrip().rstrip(),dateFormat=dateFormat)
+          workCodeworkName=cols[6].text.lstrip().rstrip()
+          payOrderNo=cols[7].text.lstrip().rstrip()
+          applicantName=cols[8].text.lstrip().rstrip()
+          daysWorked=cols[10].text.lstrip().rstrip()
+          payorderAmount=cols[11].text.lstrip().rstrip()
+          creditedDateString=cols[12].text.lstrip().rstrip()
+          disbursedAmount=cols[13].text.lstrip().rstrip()
+          disbursedDateString=cols[14].text.lstrip().rstrip()[:11]
+
+          if "/" in workCodeworkName:
+            workArray=workCodeworkName.split("/")
+            workCode=workArray[0]
+            workName=workArray[1]
+          else:
+            workName=workCodeworkName
+            workCode=None
+
+          dateTo=getDateObj(musterClosureDateString,dateFormat=dateFormat)
+          dateFrom=getDateObj(musterOpenDateString,dateFormat=dateFormat)
+          creditedDate=getDateObj(creditedDateString,dateFormat=dateFormat)
+          disbursedDate=getDateObj(disbursedDateString,dateFormat=dateFormat)
+          pr=APWorkPayment.objects.filter(jobcard=obj,epayorderNo=epayorderNo).first()
+          if pr is None: 
+            pr=APWorkPayment.objects.create(jobcard=obj,epayorderNo=epayorderNo)
+          pr.name=applicantName
+          pr.musterNo=musterNo
+          pr.workCode=workCode
+          pr.workName=workName
+          pr.dateTo=dateTo
+          pr.dateFrom=dateFrom
+          pr.payorderDate=payOrderDate
+          if daysWorked.isdigit():
+            pr.daysWorked=daysWorked
+          #logger.info(payorderAmount)
+          if payorderAmount.isdigit():
+            pr.payorderAmount=payorderAmount
+          if disbursedAmount.isdigit():
+            pr.disbursedAmount=disbursedAmount
+          pr.payorderNo=payOrderNo
+          pr.creditedDate=creditedDate
+          pr.disbursedDate=disbursedDate
+         #if (creditedDate is not None) and (dateTo is not None):
+         #  diffDays=(creditedDate-dateTo).days
+         #  if diffDays > 30:
+         #    isDelayedPayment = True
+         #  else:
+         #    isDelayedPayment = False
+         #elif (creditedDate is None) and (dateTo is not None):
+         #  diffDays=(datetime.datetime.today().date() - dateTo).days
+         #  if diffDays > 30:
+         #    isDelayedPayment = True
+         #  else:
+         #    isDelayedPayment = False
+         #else:
+         #    isDelayedPayment=False
+         #pr.isDelayedPayment=isDelayedPayment
+          if payOrderDate is not None:
+            datetimeObject=payOrderDate#datetime.datetime.strptime(epayOrderDate, '%Y-%m-%d')
+            if datetimeObject.month <= 3:
+              finyear=str(datetimeObject.year)[2:]
+            else:
+              finyear=str(datetimeObject.year+1)[2:]
+            pr.ftofinyear=finyear
+          #logger.debug("The PR id is %s " % str(pr.id))
+          pr.save()
+
+
 libtechMethodNames={
-#       'downloadJobcardtelangana'   : telanganaJobcardDownload,
+      'downloadJobcardtelangana'   : telanganaJobcardDownload,
       'downloadJobcard'            : downloadJobcard,
       'processJobcard'             : processJobcard,
       'downloadMuster'             : downloadMusterNew,
        'downloadWagelist'           : downloadWagelist,
       'downloadRejectedPayment'    : downloadRejectedPayment,
        'downloadFTO'                : downloadFTO,
-#      'processJobcardtelangana'    : telanganaJobcardProcess,
+     'processJobcardtelangana'    : telanganaJobcardProcess,
       'processMuster'              : processMuster,
        'processWagelist'            : processWagelist,
       'processRejectedPayment'     : processRejectedPayment,

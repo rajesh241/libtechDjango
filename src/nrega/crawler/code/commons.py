@@ -13,6 +13,7 @@ import boto3
 import datetime
 import time
 import os
+import xlrd
 from boto3.session import Session
 from botocore.client import Config
 from bs4 import BeautifulSoup
@@ -20,6 +21,16 @@ from config.defines import djangoSettings,logDir,LIBTECH_AWS_SECRET_ACCESS_KEY,L
 from datetime import datetime, timedelta
 from nrega.crawler.commons.nregaFunctions import getCurrentFinYear,stripTableAttributes,getCenterAlignedHeading,htmlWrapperLocal,getFullFinYear,correctDateFormat,table2csv,array2HTMLTable,getDateObj,stripTableAttributesPreserveLinks,getFinYear
 from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Jobcard,PanchayatCrawlInfo,Worker,PanchayatStat,Report
+
+def csv_from_excel(excelFile,csvFile):
+    wb = xlrd.open_workbook(excelFile)
+    sh = wb.sheet_by_name('Documents')
+    your_csv_file = open(csvFile, 'wb')
+    wr = csv.writer(your_csv_file, quoting=csv.QUOTE_ALL)
+    for rownum in range(sh.nrows):
+        wr.writerow(sh.row_values(rownum))
+    your_csv_file.close()
+
 def getAuthToken():
   data={
       'username' : apiusername,

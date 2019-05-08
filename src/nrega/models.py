@@ -186,7 +186,7 @@ class CrawlRequest(models.Model):
   libtechTag=models.ManyToManyField('LibtechTag',related_name="crawlReqeustTag",blank=True)
   panchayat=models.ForeignKey('panchayat',on_delete=models.CASCADE,null=True,blank=True)
   block=models.ForeignKey('block',on_delete=models.CASCADE,null=True,blank=True)
-  crawlState=models.ForeignKey('CrawlState',on_delete=models.SET_NULL,null=True,blank=True,default=1)
+  crawlState=models.ForeignKey('CrawlState',on_delete=models.SET_NULL,null=True,blank=True)
   source=models.CharField(max_length=256,default="test")
   processName=models.CharField(max_length=256,blank=True,null=True)
   priority=models.PositiveSmallIntegerField(default=0)
@@ -361,6 +361,8 @@ class PanchayatStat(models.Model):
   musterDownloadAccuracy=models.PositiveSmallIntegerField(default=0)
   jobcardDownloadAccuracy=models.PositiveSmallIntegerField(default=0)
   wagelistDownloadAccuracy=models.PositiveSmallIntegerField(default=0)
+
+  musterTransactionCSV=models.URLField(max_length=2048,blank=True,null=True)
   class Meta:
     unique_together = ( 'panchayat','finyear')  
     db_table = 'panchayatStat'
@@ -819,9 +821,10 @@ class APWorkPayment(models.Model):
   jobcard=models.ForeignKey('Jobcard',db_index=True,on_delete=models.CASCADE,blank=True,null=True)
   worker=models.ForeignKey('Worker',on_delete=models.CASCADE,db_index=True,null=True,blank=True)
   name=models.CharField(max_length=512,null=True,blank=True)
+  finyear=models.CharField(max_length=2,blank=True,null=True)
+  ftofinyear=models.CharField(max_length=2,blank=True,null=True)
   applicantNo=models.PositiveSmallIntegerField(db_index=True,null=True,blank=True)
   musterNo=models.CharField(max_length=64,db_index=True,null=True,blank=True)
-  finyear=models.CharField(max_length=2,null=True,blank=True)
   workCode=models.CharField(max_length=128,null=True,blank=True)
   workName=models.CharField(max_length=2046,null=True,blank=True)
   dateFrom=models.DateField(null=True,blank=True)
@@ -839,6 +842,7 @@ class APWorkPayment(models.Model):
   disbursedAmount=models.DecimalField(max_digits=10,decimal_places=4,null=True,blank=True)
   disbursedDate=models.DateField(null=True,blank=True)
   isDelayedPayment=models.BooleanField(default=False)
+  isMusterRecordPresent=models.BooleanField(default=False)
   created=models.DateTimeField(null=True,blank=True,auto_now_add=True)
   modified=models.DateTimeField(null=True,blank=True,auto_now=True)
   class Meta:
@@ -970,6 +974,21 @@ def worker_post_save_receiver(sender,instance,*args,**kwargs):
     instance.code=code
     instance.save()
 
+def crawlRequest_post_save_receiver(sender,instance,*args,**kwargs):
+  if instance.panchayat is not None:
+    sc=instance.panchayat.block.district.state.code
+  elif instance.block is not None:
+    sc=instance.block.district.state.code
+  else:
+    sc=None
+  if instance.crawlState is None:
+    if sc == telanganaStateCode:
+       cs=CrawlState.objects.filter(sequence=100).first()
+    else:
+       cs=CrawlState.objects.filter(sequence=1).first()
+    instance.crawlState=cs
+    instance.save() 
+     
 def report_post_save_receiver(sender,instance,*args,**kwargs):
   if instance.panchayat is not None:
     code="%s_%s_%s" % (instance.panchayat.code,instance.finyear,instance.reportType)
@@ -984,6 +1003,7 @@ post_save.connect(panchayatStat_post_save_receiver,sender=PanchayatStat)
 post_save.connect(worker_post_save_receiver,sender=Worker)
 post_save.connect(jobcard_post_save_receiver,sender=Jobcard)
 post_save.connect(muster_post_save_receiver,sender=Muster)
+post_save.connect(crawlRequest_post_save_receiver,sender=CrawlRequest)
 post_save.connect(rejectedPayment_post_save_receiver,sender=RejectedPayment)
 post_save.connect(wagelist_post_save_receiver,sender=Wagelist)
 post_save.connect(fto_post_save_receiver,sender=FTO)

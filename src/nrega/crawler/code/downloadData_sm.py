@@ -80,7 +80,7 @@ def main():
     cqID=args['inputID']
     downloadStage=args['downloadStage']
     if cqID is not None:
-      cq=crawlRequest.objects.filter(id=cqID).first()
+      cq=CrawlRequest.objects.filter(id=cqID).first()
     else:
       cq=CrawlRequest.objects.filter( Q(isComplete=False,crawlState__minhour__lte=curhour,crawlState__maxhour__gt=curhour,attemptCount__lte=16,inProgress=False) ).order_by("-priority","-crawlState__sequence","attemptCount","crawlAttemptDate").first()
     if cq is not None:

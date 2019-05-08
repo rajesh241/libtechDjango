@@ -175,8 +175,9 @@ class reportModelAdmin(admin.ModelAdmin):
       return qs
 class apWorkPaymentModelAdmin(admin.ModelAdmin):
   actions = [setisError,setisProcessedFalse]
-  list_display=["id","jobcard"]
-  readonly_fields=["jobcard","worker"]
+  list_display=["id","jobcard","payorderDate","name",'payorderAmount']
+  readonly_fields=["jobcard","worker",'payorderDate']
+  search_fields=["jobcard__tjobcard"]
 
 class wagelistTransactionModelAdmin(admin.ModelAdmin):
   list_display=["id","wagelistIndex","fto","worker","wagelist","isWagelistFTOAbsent","isRegenerated"]

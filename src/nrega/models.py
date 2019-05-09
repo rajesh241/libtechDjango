@@ -188,6 +188,7 @@ class CrawlRequest(models.Model):
   block=models.ForeignKey('block',on_delete=models.CASCADE,null=True,blank=True)
   crawlState=models.ForeignKey('CrawlState',on_delete=models.SET_NULL,null=True,blank=True)
   source=models.CharField(max_length=256,default="test")
+  sequenceType=models.CharField(max_length=256,default="default")
   processName=models.CharField(max_length=256,blank=True,null=True)
   priority=models.PositiveSmallIntegerField(default=0)
   startFinYear=models.CharField(max_length=2,default='18')
@@ -982,10 +983,13 @@ def crawlRequest_post_save_receiver(sender,instance,*args,**kwargs):
   else:
     sc=None
   if instance.crawlState is None:
-    if sc == telanganaStateCode:
-       cs=CrawlState.objects.filter(sequence=100).first()
+    if instance.sequenceType == 'dd':
+      cs=CrawlState.objects.filter(sequence=200).first()
     else:
-       cs=CrawlState.objects.filter(sequence=1).first()
+      if sc == telanganaStateCode:
+         cs=CrawlState.objects.filter(sequence=100).first()
+      else:
+         cs=CrawlState.objects.filter(sequence=1).first()
     instance.crawlState=cs
     instance.save() 
      

@@ -50,7 +50,8 @@ def argsFetch():
   parser.add_argument('-objID', '--objID', help='Manage Panchayat Crawl Queue', required=False)
   parser.add_argument('-mn', '--modelName', help='Manage Panchayat Crawl Queue', required=False)
   parser.add_argument('-fn', '--functionName', help='Manage Panchayat Crawl Queue', required=False)
-  parser.add_argument('-pc', '--panchayatCode', help='Manage Panchayat Crawl Queue', required=False)
+  parser.add_argument('-lc', '--locationCode', help='Location Code either block or panchayat', required=False)
+  parser.add_argument('-st', '--sequenceType', help='SequenceType for the crawlRequest', required=False)
   parser.add_argument('-p', '--populate', help='Populate CrawlQueue', required=False,action='store_const', const=1)
   parser.add_argument('-se', '--singleExecute', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=1)
   parser.add_argument('-csm', '--crawlStateMachine', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=2)
@@ -75,10 +76,10 @@ def main():
     modelName=args['modelName']
     funcName=args['functionName']
     finyear=args['finyear']
-    panchayatCode=args['panchayatCode']
+    locationCode=args['locationCode']
     cq=CrawlRequest.objects.filter(id=cqID).first()
     cobj=CrawlerObject(cq.id)
-    pobj=LocationObject(cobj,code=panchayatCode)
+    pobj=LocationObject(cobj,code=locationCode)
     createCodeObjDict(logger,pobj)
     if modelName is not None:
       if funcName == "dumpDataCSV":
@@ -150,17 +151,21 @@ def main():
             logger.info(myWorker.id)
             myWorker.save()
   if args['populate']:
+    if args['sequenceType']:
+      sequenceType=args['sequenceType']
+    else:
+      sequenceType='default'
     if args['startFinYear'] is not None:
       startFinYear=args['startFinYear']
     else:
       startFinYear='18'
-    code=args['testInput']
+    code=args['locationCode']
     if len(code) == 10:
       obj=Panchayat.objects.filter(code=code).first()
-      CrawlRequest.objects.create(panchayat=obj,startFinYear=startFinYear)
+      cr=CrawlRequest.objects.create(panchayat=obj,startFinYear=startFinYear,sequenceType=sequenceType)
     elif len(code) == 7:
       obj=Block.objects.filter(code=code).first()
-      CrawlRequest.objects.create(block=obj,startFinYear=startFinYear)        
+      cr=CrawlRequest.objects.create(block=obj,startFinYear=startFinYear,sequenceType=sequenceType)        
   logger.info("...END PROCESSING") 
   exit(0)
 if __name__ == '__main__':

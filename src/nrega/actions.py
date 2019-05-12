@@ -82,9 +82,9 @@ def download_reports_zip(modeladmin, request, queryset):
         filename="%s_%s.csv" % (obj,obj.finyear)
       else:
         filename="%s.csv" % (obj)
-      cmd="mkdir -p %s && cd %s && wget -O %s %s " %(filepath,filepath,filename,obj.reportFile.url) 
+      cmd="mkdir -p %s && cd %s && wget -O %s %s " %(filepath,filepath,filename,obj.reportURL) 
       os.system(cmd)
-      s+=obj.reportFile.url
+      s+=obj.reportURL
       s+="\n"
     cmd="cd %s && zip -r %s.zip *" % (baseDir,baseDir)
     os.system(cmd)
@@ -98,7 +98,7 @@ def download_reports_zip(modeladmin, request, queryset):
                                     aws_secret_access_key=LIBTECH_AWS_SECRET_ACCESS_KEY)
     s3 = session.resource('s3',config=Config(signature_version='s3v4'))
     s3.Bucket(AWS_STORAGE_BUCKET_NAME).put_object(ACL='public-read',Key=cloudFilename, Body=zipdata)
-    baseURL="https://s3.ap-south-1.amazonaws.com/libtech-nrega1"
+    baseURL="https://s3.ap-south-1.amazonaws.com/%s" % (AWS_STORAGE_BUCKET_NAME.lower())
     publicURL="%s/%s" % (baseURL,cloudFilename)
 #    with open("/tmp/test.csv","w") as f:
 #      f.write(s)

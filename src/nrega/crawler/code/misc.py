@@ -1,4 +1,5 @@
 import os
+import urllib.request
 from bs4 import BeautifulSoup
 import re
 import random
@@ -677,6 +678,26 @@ def main():
       logger.info(eachPanchayat.name)
 
   if args['test']:
+#   reportType='telanganaMusters'
+#   myReports=Report.objects.filter(reportType=reportType)
+#   for eachReport in myReports:
+#      f=urllib.request.urlopen(eachReport.reportURL)
+#      s=f.read()
+#      if "***No Data found for the selection" in s.decode("utf-8"):
+#   #     eachReport.delete()
+#        logger.info("INvalid Report for panchayat %s block %s finyear %s" % (eachReport.panchayat.name,eachReport.panchayat.block.name,eachReport.finyear))
+    ltTag=LibtechTag.objects.filter(id=8).first()
+    with open('/tmp/tjobcards.csv') as fp:
+      for line in fp:
+        tjobcard=line.lstrip().rstrip()
+        myJobcard=Jobcard.objects.filter(tjobcard=tjobcard).first()
+        if myJobcard is not None:
+          myJobcard.libtechTag.add(ltTag)
+          myJobcard.save()
+        else:
+          logger.info(tjobcard)
+
+    exit(0)
     objs=CrawlQueue.objects.filter(id__gt=8241)
     cqID=args['testInput']
     inID=args['testInput2']

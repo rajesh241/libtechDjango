@@ -258,9 +258,9 @@ def crawlNICPanchayat(logger,lobj,downloadStage=None):
         error=telanganaMusterDownload(logger,pobj,finyear)
         if error is not None:
           return error
-        error=telanganaMusterProcess(logger,pobj,finyear)
-        if error is not None:
-          return error
+       #error=telanganaMusterProcess(logger,pobj,finyear)
+       #if error is not None:
+       #  return error
        
       elif (downloadStage =="downloadMusters"):
         modelName="Muster"
@@ -1306,7 +1306,11 @@ def libtechQueueWorker(logger,q,pobj,modelName,method):
     else:
       finyear=obj.finyear
     key="%s%s%s" % (method,modelName,statePrefix)
-    logger.info("Queue Size %s Thread %s  ModelName %s finyear %s Object ID %s  code %s " % (str(q.qsize()),name,key,finyear,obj.id,obj.code))
+    try:
+      locationCode=pobj.panchayatCode
+    except:
+      locationCode=pobj.blockCode
+    logger.info("Queue Size %s Thread %s  ModelName %s locationCode %s finyear %s Object ID %s  code %s " % (str(q.qsize()),name,key,locationCode,finyear,obj.id,obj.code))
     try:
       libtechMethodNames[key](logger,pobj,obj)
     except Exception as e:
@@ -3191,8 +3195,8 @@ def createDetailWorkPaymentReportAP(logger,pobj,finyear):
   reportType="workPaymentAP"
   a=[]
   locationArrayLabel=["state","district","block","panchayat","village","stateCode"]
-  jobcardArrayLabel=["jobcardID","jobcard","tjobcard","jcNo","caste","headOfHousehold"]
-  wdLabel=["applicantName","workCode","workName","musterNo","dateFrom","dateTo","daysWorked","accountNo","payorderNo","payorderDate","epayorderno","epayorderDate","payingAgencyDate","creditedDate","disbursedDate","paymentMode","payOrdeAmount","disbursedAmount","isMusterReportFound"]
+  jobcardArrayLabel=["jobcardID","jobcard","tjobcard","jcNo","caste","headOfHousehold","tags"]
+  wdLabel=["applicantName","finyear","workCode","workName","musterNo","dateFrom","dateTo","daysWorked","accountNo","payorderNo","payorderDate","epayorderno","epayorderDate","payingAgencyDate","creditedDate","disbursedDate","paymentMode","payOrdeAmount","disbursedAmount","isMusterReportFound"]
   a=locationArrayLabel+jobcardArrayLabel+wdLabel
   w.writerow(a)
   workRecords=APWorkPayment.objects.filter(jobcard__panchayat=pobj.panchayat,finyear=finyear).order_by("jobcard__tjobcard","epayorderDate")
@@ -3201,14 +3205,20 @@ def createDetailWorkPaymentReportAP(logger,pobj,finyear):
     jobcardArray=[""]*6
     locationArray=[""]*6
     if wd.jobcard is not None:
+      libtechTag=''
+      tagArray=wd.jobcard.libtechTag.all()
+      logger.info(f"Tag Array { tagArray } ")
+      for ltTag in tagArray:
+        libtechTag+=ltTag.name
+        libtechTag+="," 
       tjobcard1="~%s" % (wd.jobcard.tjobcard)
-      jobcardArray=[str(wd.jobcard.id),wd.jobcard.jobcard,tjobcard1,wd.jobcard.jcNo,wd.jobcard.caste,wd.jobcard.headOfHousehold]
+      jobcardArray=[str(wd.jobcard.id),wd.jobcard.jobcard,tjobcard1,wd.jobcard.jcNo,wd.jobcard.caste,wd.jobcard.headOfHousehold,libtechTag]
       if wd.jobcard.village is not None:
         villageName=wd.jobcard.village.name
       else:
         villageName=''
       locationArray=[wd.jobcard.panchayat.block.district.state.name,wd.jobcard.panchayat.block.district.name,wd.jobcard.panchayat.block.name,wd.jobcard.panchayat.name,villageName,wd.jobcard.panchayat.block.district.state.stateShortCode]
-    wdArray=[wd.name,wd.workCode,wd.workName,wd.musterNo,str(wd.dateFrom),str(wd.dateTo),str(wd.daysWorked),wd.accountNo,wd.payorderNo,str(wd.payorderDate),wd.epayorderNo,str(wd.epayorderDate),str(wd.payingAgencyDate),str(wd.creditedDate),str(wd.disbursedDate),wd.modeOfPayment,str(wd.payorderAmount),str(wd.disbursedAmount),str(wd.isMusterRecordPresent),str(wd.id)]
+    wdArray=[wd.name,wd.finyear,wd.workCode,wd.workName,wd.musterNo,str(wd.dateFrom),str(wd.dateTo),str(wd.daysWorked),wd.accountNo,wd.payorderNo,str(wd.payorderDate),wd.epayorderNo,str(wd.epayorderDate),str(wd.payingAgencyDate),str(wd.creditedDate),str(wd.disbursedDate),wd.modeOfPayment,str(wd.payorderAmount),str(wd.disbursedAmount),str(wd.isMusterRecordPresent),str(wd.id)]
     a=locationArray+jobcardArray+wdArray
     w.writerow(a)
   f.seek(0)
@@ -3222,7 +3232,8 @@ def createDetailWorkPaymentReportAP(logger,pobj,finyear):
 def telanganaMusterDownload(logger, pobj,finyear):
   reportType="telanganaMusters"
   error=None
-  isUpdated=isReportUpdated(logger,pobj,finyear,reportType)
+  reportThreshold = datetime.datetime.now() - datetime.timedelta(days=7)
+  isUpdated=isReportUpdated(logger,pobj,finyear,reportType,reportThreshold=reportThreshold)
   if isUpdated == True:
     return None
   else:
@@ -3319,18 +3330,24 @@ def telanganaMusterDownload(logger, pobj,finyear):
         if response.status_code == 200:
           filename = '/tmp/muster_%s_%s.xlsx' %(pobj.panchayatCode,finyear)
           csvfilename = '/tmp/muster_%s_%s.csv'% (pobj.panchayatCode,finyear)
+          logger.info(csvfilename)
           with open(filename, 'wb') as html_file:
               logger.info('Writing [%s]' % filename)
               html_file.write(response.content)
           csv_from_excel(filename,csvfilename)
           with open(csvfilename, 'r') as file:
             csvdata = file.read()
-          filename=pobj.panchayatSlug+"_"+finyear+"_telanganaMusters.csv"
-          filepath=pobj.panchayatFilepath.replace("filename",filename)
-          contentType="text/csv"
-          savePanchayatReport(logger,pobj,finyear,reportType,csvdata,filepath,contentType=contentType)
+          if ( ("***No Data found for the selection" in csvdata) and (finyear != str(getCurrentFinYear()) )):
+            error="Unable to download Musters for panchayat %s finyear %s" % (pobj.panchayatSlug,finyear)
+          else:
+            filename=pobj.panchayatSlug+"_"+finyear+"_telanganaMusters.csv"
+            filepath=pobj.panchayatFilepath.replace("filename",filename)
+            contentType="text/csv"
+            savePanchayatReport(logger,pobj,finyear,reportType,csvdata,filepath,contentType=contentType)
         else:
           error="Unable to download Musters for panchayat %s finyear %s" % (pobj.panchayatSlug,finyear)
+    if error is None:
+      error=telanganaMusterProcess(logger,pobj,finyear)
     return error
 
 def telanganaJobcardProcess(logger,pobj,obj):

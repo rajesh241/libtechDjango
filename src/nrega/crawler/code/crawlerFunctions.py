@@ -3207,7 +3207,6 @@ def createDetailWorkPaymentReportAP(logger,pobj,finyear):
     if wd.jobcard is not None:
       libtechTag=''
       tagArray=wd.jobcard.libtechTag.all()
-      logger.info(f"Tag Array { tagArray } ")
       for ltTag in tagArray:
         libtechTag+=ltTag.name
         libtechTag+="," 

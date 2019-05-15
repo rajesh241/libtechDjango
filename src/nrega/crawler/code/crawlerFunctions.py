@@ -329,6 +329,154 @@ def getPanchayatActiveStatus(logger,pobj,finyear):
   isActive=ps.isActive
   return isActive
 
+def processGlance(logger,pobj):
+  reportType="nicGlanceStats"
+  finyear=None
+  if hasattr(pobj, 'panchayat'):
+    error,myhtml=getReportHTML(logger,pobj,reportType,finyear)
+  else:
+    error,myhtml=getReportHTML(logger,pobj,reportType,finyear,locationType="block")
+  if myhtml is not None:
+    htmlsoup=BeautifulSoup(myhtml,"lxml")
+    myTable=htmlsoup.find("table")
+    rows=myTable.findAll("tr")
+    finyearArray=[None]
+    for row in rows:
+      cols=row.findAll("td")
+      if len(cols) >= 2:
+        rowHeader=cols[0].text.lstrip().rstrip()
+        if ("II" in rowHeader) and ("Progress" in rowHeader):
+          logger.info(rowHeader)
+          for col in cols:
+            finyearString=col.text.replace("FY","").lstrip().rstrip()
+            logger.info(finyearString)      
+
+def getGlance(logger,pobj):
+  reportType="nicGlanceStats"
+  reportName="NIC At a Glance Stats"
+  reportIdentifier="Financial Progress"
+  url="http://mnregaweb4.nic.in/netnrega/all_lvl_details_dashboard_new.aspx"
+  urlPrefix="http://mnregaweb4.nic.in/netnrega/"
+  r=requests.get(url)
+  if r.status_code == 200:
+    myhtml=r.content
+    htmlsoup=BeautifulSoup(myhtml,"lxml")
+    validation = htmlsoup.find(id='__EVENTVALIDATION').get('value')
+    viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
+    logger.info(viewState)
+    logger.info(validation) 
+    headers = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate',
+    'Accept-Language': 'en-GB,en;q=0.5',
+    'Connection': 'keep-alive',
+    'Host': 'mnregaweb4.nic.in',
+    'Referer': url,
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:45.0) Gecko/20100101 Firefox/45.0',
+    'Content-Type': 'application/x-www-form-urlencoded',
+    }
+    data = {
+      '__EVENTTARGET': 'ddl_state',
+      '__EVENTARGUMENT': '',
+      '__LASTFOCUS': '',
+      '__VIEWSTATE': viewState,
+      '__VIEWSTATEENCRYPTED': '',
+      '__EVENTVALIDATION': validation,
+      'ddl_state': pobj.stateCode
+    }
+ 
+    response = requests.post(url,headers=headers, data=data)
+    if response.status_code==200:
+      myhtml=response.content
+    else:
+      myhtml=None
+    if myhtml is not None:
+      logger.info("my html is not None")
+      htmlsoup=BeautifulSoup(myhtml,"lxml")
+      validation = htmlsoup.find(id='__EVENTVALIDATION').get('value')
+      viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
+      data = {
+        '__EVENTTARGET': 'ddl_dist',
+        '__EVENTARGUMENT': '',
+        '__LASTFOCUS': '',
+        '__VIEWSTATE': viewState,
+        '__VIEWSTATEENCRYPTED': '',
+        '__EVENTVALIDATION': validation,
+        'ddl_state': pobj.stateCode,
+        'ddl_dist' : pobj.districtCode
+      }
+      response = requests.post(url,headers=headers, data=data)
+      if response.status_code==200:
+        myhtml=response.content
+      else:
+        myhtml=None
+      if myhtml is not None:
+        htmlsoup=BeautifulSoup(myhtml,"lxml")
+        validation = htmlsoup.find(id='__EVENTVALIDATION').get('value')
+        viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
+        data = {
+          '__EVENTTARGET': 'ddl_blk',
+          '__EVENTARGUMENT': '',
+          '__LASTFOCUS': '',
+          '__VIEWSTATE': viewState,
+          '__VIEWSTATEENCRYPTED': '',
+          '__EVENTVALIDATION': validation,
+          'ddl_state': pobj.stateCode,
+          'ddl_dist' : pobj.districtCode,
+          'ddl_blk' : pobj.blockCode
+        }
+        response = requests.post(url,headers=headers, data=data)
+        if response.status_code==200:
+          myhtml=response.content
+        else:
+          myhtml=None
+        if myhtml is not None:
+          htmlsoup=BeautifulSoup(myhtml,"lxml")
+          validation = htmlsoup.find(id='__EVENTVALIDATION').get('value')
+          viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
+          logger.info(viewState)
+          myPanchayats=Panchayat.objects.filter(block=pobj.block)
+          locationCodeArray=["ALL"]
+          for eachPanchayat in myPanchayats: 
+            locationCodeArray.append(eachPanchayat.code)
+          for locationCode in locationCodeArray:
+            data = {
+              '__EVENTTARGET': '',
+              '__EVENTARGUMENT': '',
+              '__LASTFOCUS': '',
+              '__VIEWSTATE': viewState,
+              '__VIEWSTATEENCRYPTED': '',
+              '__EVENTVALIDATION': validation,
+              'ddl_state': pobj.stateCode,
+              'ddl_dist' : pobj.districtCode,
+              'ddl_blk' : pobj.blockCode,
+              'ddl_pan' : locationCode,
+              'btproceed' : 'View Detail'
+            }
+            response = requests.post(url,headers=headers, data=data)
+            if response.status_code==200:
+              myhtml=response.content
+            else:
+              myhtml=None
+            if myhtml is not None:
+              htmlsoup=BeautifulSoup(myhtml,"lxml")
+              validation = htmlsoup.find(id='__EVENTVALIDATION').get('value')
+              viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
+              myiFrame=htmlsoup.find("iframe")
+              if myiFrame is not None:
+                statsURL=urlPrefix+myiFrame['src']
+                logger.info(statsURL)
+                r=requests.get(statsURL)
+                if r.status_code == 200:
+                  if locationCode == "ALL":
+                    error=validateAndSave(logger,pobj,r.content,reportName,reportType,locationType="block",jobcardPrefix=reportIdentifier)
+                  else:
+                    lobj=LocationObject(pobj.cobj,code=locationCode)
+                    error=validateAndSave(logger,lobj,r.content,reportName,reportType,jobcardPrefix=reportIdentifier)
+                   
+  
+
+
 def downloadPanchayatStat(logger,pobj,finyear):
   error1="could not download Panchayat Stat for finyear %s "  % (finyear)
   reportType="nicStatHTML"

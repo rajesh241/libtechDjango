@@ -41,6 +41,8 @@ class State(models.Model):
   isNIC field is true for State nrega websites which are hosted on NREGA
   '''
   name=models.CharField(max_length=256)
+  nameInLocalLanguage=models.BooleanField(default=False)
+  englishName=models.CharField(max_length=256,null=True,blank=True)
   code=models.CharField(max_length=2,unique=True,db_index=True)
   slug=models.SlugField(blank=True) 
   crawlIP=models.CharField(max_length=256,null=True,blank=True)
@@ -54,6 +56,8 @@ class State(models.Model):
 class District(models.Model):
   state=models.ForeignKey('state',on_delete=models.CASCADE)
   name=models.CharField(max_length=256)
+  nameInLocalLanguage=models.BooleanField(default=False)
+  englishName=models.CharField(max_length=256,null=True,blank=True)
   code=models.CharField(max_length=4,db_index=True,unique=True)
   slug=models.SlugField(blank=True) 
   tcode=models.CharField(max_length=8,blank=True,null=True)
@@ -66,9 +70,12 @@ class District(models.Model):
 class Block(models.Model):
   district=models.ForeignKey('district',on_delete=models.CASCADE)
   name=models.CharField(max_length=256)
+  nameInLocalLanguage=models.BooleanField(default=False)
+  englishName=models.CharField(max_length=256,null=True,blank=True)
   code=models.CharField(max_length=7,db_index=True,unique=True)
   libtechTag=models.ManyToManyField('LibtechTag',related_name="blockTag",blank=True)
   slug=models.SlugField(blank=True) 
+  nicStatURL=models.URLField(max_length=2048,blank=True,null=True)
   tcode=models.CharField(max_length=7,unique=True,null=True,blank=True)
   class Meta:
     db_table = 'block'
@@ -78,10 +85,13 @@ class Block(models.Model):
 class Panchayat(models.Model):
   block=models.ForeignKey('block',on_delete=models.CASCADE)
   name=models.CharField(max_length=256)
+  nameInLocalLanguage=models.BooleanField(default=False)
+  englishName=models.CharField(max_length=256,null=True,blank=True)
   code=models.CharField(max_length=10,db_index=True,unique=True)
   slug=models.SlugField(blank=True) 
   tcode=models.CharField(max_length=10,blank=True,null=True)
   libtechTag=models.ManyToManyField('LibtechTag',related_name="panchayatTag",blank=True)
+  nicStatURL=models.URLField(max_length=2048,blank=True,null=True)
   remarks=models.CharField(max_length=256,blank=True,null=True)
   lastCrawlDate=models.DateTimeField(null=True,blank=True)
   lastCrawlDuration=models.IntegerField(blank=True,null=True)  #This is Duration that last Crawl took in Minutes
@@ -155,7 +165,7 @@ class Report(models.Model):
   reportType=models.CharField(max_length=256)
   reportURL=models.URLField(max_length=2048,blank=True,null=True)
   code=models.CharField(max_length=256,db_index=True,blank=True,null=True)
-  finyear=models.CharField(max_length=2)
+  finyear=models.CharField(max_length=2,blank=True,null=True)
   created=models.DateTimeField(auto_now_add=True)
   modified=models.DateTimeField(auto_now=True)
   class Meta:
@@ -881,7 +891,10 @@ class LanguageDict(models.Model):
 
 
 def createslug(instance):
-  myslug=slugify(instance.name)[:50]
+  try:
+    myslug=slugify(instance.englishName)[:50]
+  except:
+    myslug=slugify(instance.name)[:50]
   if myslug == '':
     if hasattr(instance, 'code'):
       myslug="%s-%s" % (instance.__class__.__name__ , str(instance.code))

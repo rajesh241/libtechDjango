@@ -28,9 +28,9 @@ class villageModelAdmin(admin.ModelAdmin):
   search_fields=["name","code"]
   readonly_fields=["panchayat"]
 class blockModelAdmin(admin.ModelAdmin):
-  list_display = ["name","code"]
+  list_display = ["name","englishName","code"]
   list_display_links=["name"]
-  list_filter=["district__state"]
+  list_filter=["nameInLocalLanguage","district__state"]
   search_fields=["name","code"]
   
   def get_crawlRequest_link(self,obj):

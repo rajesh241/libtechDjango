@@ -155,15 +155,15 @@ def validateAndSave(logger,pobj,myhtml,reportName,reportType,finyear=None,locati
     if finyear is None:
       finyearString=''
     else:
-      finyearString=finyear
+      finyearString="_"+finyear
 
     if locationType == 'panchayat':
       locationName="%s-%s-%s-%s" % (pobj.stateName,pobj.districtName,pobj.blockName,pobj.panchayatName)
-      filename="%s_%s_%s_%s.html" % (reportType,pobj.panchayatSlug,pobj.panchayatCode,finyearString)
+      filename="%s_%s_%s%s.html" % (reportType,pobj.panchayatSlug,pobj.panchayatCode,finyearString)
       filepath=pobj.panchayatFilepath.replace("filename",filename)
     else:
       locationName="%s-%s-%s" % (pobj.stateName,pobj.districtName,pobj.blockName)
-      filename="%s_%s_%s_%s.html" % (reportType,pobj.blockSlug,pobj.blockCode,finyearString)
+      filename="%s_%s_%s%s.html" % (reportType,pobj.blockSlug,pobj.blockCode,finyearString)
       filepath=pobj.blockFilepath.replace("filename",filename)
 
     if validate == True:

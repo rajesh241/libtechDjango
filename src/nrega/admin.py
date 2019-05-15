@@ -151,15 +151,10 @@ class workerModelAdmin(admin.ModelAdmin):
 
 class reportModelAdmin(admin.ModelAdmin):
   actions = [download_reports_zip]
-  list_display=["__str__","finyear","get_reportFile","modified","get_block"]
+  list_display=["__str__","finyear","get_reportFile","modified","code"]
   readonly_fields=["panchayat","block","finyear","reportType"]
   list_filter=["finyear","reportType"]
   search_fields=["panchayat__name","panchayat__block__name","panchayat__code"]
-  def get_block(self, obj):
-    if obj.block is None:
-      return obj.panchayat.block.name
-    else:
-      return obj.block.name
   def get_reportFile(self,obj):
     return mark_safe("<a href='%s'>Download</a>" % obj.reportURL)
   get_reportFile.allow_tags = True

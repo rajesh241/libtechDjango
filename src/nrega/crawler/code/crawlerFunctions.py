@@ -36,7 +36,7 @@ django.setup()
 from nrega import models as nregamodels
 from nrega.crawler.commons.nregaFunctions import getCurrentFinYear,stripTableAttributes,getCenterAlignedHeading,htmlWrapperLocal,getFullFinYear,correctDateFormat,table2csv,array2HTMLTable,getDateObj,stripTableAttributesPreserveLinks,getFinYear
 from nrega.crawler.commons.nregaSettings import statsURL,telanganaStateCode,crawlerTimeThreshold,delayPaymentThreshold,crawlerErrorTimeThreshold
-from nrega.crawler.code.commons import savePanchayatReport,uploadReportAmazon,getjcNumber,isReportUpdated,getReportHTML,validateAndSave,validateNICReport,csv_from_excel
+from nrega.crawler.code.commons import saveReport,savePanchayatReport,uploadReportAmazon,getjcNumber,isReportUpdated,getReportHTML,validateAndSave,validateNICReport,csv_from_excel
 from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Jobcard,PanchayatCrawlInfo,Worker,PanchayatStat,Village,Wagelist,FTO,WagelistTransaction,JobcardStat,DPTransaction,FTOTransaction,APWorkPayment,Report,WorkerStat,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,CrawlRequest,CrawlState,PaymentTransaction,WorkPayment
 from nrega.crawler.code.delayURLs import delayURLs
 
@@ -81,37 +81,56 @@ class LocationObject:
       self.locationType='panchayat'
     elif len(code) == 7:
       self.locationType='block'
+    elif len(code) == 4:
+      self.locationType='district'
     else:
       self.locationType='unknown'
+    
     if self.locationType=="panchayat":
       panchayatObj=Panchayat.objects.filter(code=code).first()
       blockObj=panchayatObj.block
-    else:
+      districtObj=blockObj.district
+      stateObj=panchayatObj.block.district.state
+    if self.locationType=="block":
       panchayatObj=None
       blockObj=Block.objects.filter(code=code).first()
+      districtObj=blockObj.district
+      stateObj=districtObj.state
+    else:
+      panchayatObj=None
+      blockObj=None
+      districtObj=District.objects.filter(code=code).first()
+      stateObj=districtObj.state
 
     self.searchIP="mnregaweb4.nic.in"
-    self.blockCode=blockObj.code
-    self.blockID=blockObj.id
-    self.blockName=blockObj.name
-    self.blockSlug=blockObj.slug
-    self.districtCode=blockObj.district.code
-    self.districtName=blockObj.district.name
-    self.districtSlug=blockObj.district.slug
-    self.stateCode=blockObj.district.state.code
-    self.stateName=blockObj.district.state.name
-    self.stateSlug=blockObj.district.state.slug
-    self.isNIC=blockObj.district.state.isNIC
-    self.crawlIP=blockObj.district.state.crawlIP
-    self.stateShortCode=blockObj.district.state.stateShortCode
+    self.stateCode=stateObj.code
+    self.stateName=stateObj.name
+    self.stateSlug=stateObj.slug
+    self.isNIC=stateObj.isNIC
+    self.crawlIP=stateObj.crawlIP
+    self.stateShortCode=stateObj.stateShortCode
     self.jobcardPrefix=self.stateShortCode+"-"
-    self.block=blockObj
-    self.district=blockObj.district
-    self.state=blockObj.district.state
-    self.blockFilepath="%s/%s/%s/%s/%s/%s/%s" % ("nrega",self.stateSlug,self.districtSlug,self.blockSlug,"DATA","NICREPORTS","filename")
-    self.dataFilepath="%s/%s/%s/%s/%s/%s" % ("DATA",self.stateSlug,self.districtSlug,self.blockSlug,"foldername","filename")
-    self.error=False
-    self.displayName=f'{self.blockID}-{self.blockCode}-{self.blockName}'
+    self.state=stateObj
+
+    self.districtCode=districtObj.code
+    self.districtName=districtObj.name
+    self.districtSlug=districtObj.slug
+    self.district=districtObj
+    self.districtID=districtObj.id
+    self.locationName="%s-%s" % (self.stateName,self.districtName)
+    self.districtFilepath="%s/%s/%s/%s/%s/%s" % ("nrega",self.stateSlug,self.districtSlug,"DATA","NICREPORTS","filename")
+    self.displayName=f'{self.districtID}-{self.districtCode}-{self.districtName}'
+    
+    if ((self.locationType=='panchayat') or (self.locationType=='block')):
+      self.blockFilepath="%s/%s/%s/%s/%s/%s/%s" % ("nrega",self.stateSlug,self.districtSlug,self.blockSlug,"DATA","NICREPORTS","filename")
+      self.dataFilepath="%s/%s/%s/%s/%s/%s" % ("DATA",self.stateSlug,self.districtSlug,self.blockSlug,"foldername","filename")
+      self.error=False
+      self.blockCode=blockObj.code
+      self.block=blockObj
+      self.blockID=blockObj.id
+      self.blockName=blockObj.name
+      self.blockSlug=blockObj.slug
+      self.displayName=f'{self.blockID}-{self.blockCode}-{self.blockName}'
     if self.locationType=='panchayat':
       self.panchayatCode=panchayatObj.code
       self.panchayatName=panchayatObj.name
@@ -1064,6 +1083,127 @@ def crawlFTORejectedPayment(logger,pobj,finyear):
     outhtml+="</table></body></html>"
     error=validateAndSave(logger,pobj,outhtml,reportName,reportType,finyear=finyear,locationType="block",jobcardPrefix="Financial Institution",validate=False)
 
+def getBlockStat(logger,pobj,finyear):
+  reportType="ftoStats"
+  reportName="FTO Statistics"
+  tableIdentifier="First Signatory"
+  urls=[]
+  mru=MISReportURL.objects.filter(state__code=pobj.stateCode,finyear=finyear).first()
+  urlPrefix="http://mnregaweb4.nic.in/netnrega/FTO/"
+  fullFinYear=getFullFinYear(finyear)
+  if mru is not None:
+    bankTable=None
+    postTable=None
+    coBankTable=None
+      
+    url=mru.ftoURL
+    logger.info(url)
+    r=requests.get(url)
+    if r.status_code==200:
+      s="district_code=%s" % (pobj.districtCode)
+      myhtml=r.content
+      htmlsoup=BeautifulSoup(myhtml,"lxml")
+      a=htmlsoup.find("a", href=re.compile(s))
+      bankurl="%s%s" % (urlPrefix,a['href'])
+      logger.info(bankurl)
+      r=requests.get(bankurl)
+      if r.status_code == 200:
+        cookies=r.cookies
+        myhtml=r.content
+        error,bankTable=validateNICReport(logger,pobj,myhtml,jobcardPrefix=tableIdentifier)
+        htmlsoup=BeautifulSoup(myhtml,"lxml")
+        try:
+          validation = htmlsoup.find(id='__EVENTVALIDATION').get('value',None)
+        except:
+          validation=''
+        viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
+        data = {
+           '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$RBtnLstIsEfms$2',
+           '__EVENTARGUMENT': '',
+           '__LASTFOCUS': '',
+           '__VIEWSTATE': viewState,
+           '__VIEWSTATEENCRYPTED': '',
+           '__EVENTVALIDATION': validation,
+           'ctl00$ContentPlaceHolder1$RBtnLst': 'W',
+           'ctl00$ContentPlaceHolder1$RBtnLstIsEfms': 'C',
+           'ctl00$ContentPlaceHolder1$HiddenField1': ''
+        }
+
+        response = requests.post(bankurl,cookies=cookies, data=data)
+        if response.status_code==200:
+          myhtml=response.content
+          error,coBankTable=validateNICReport(logger,pobj,myhtml,jobcardPrefix=tableIdentifier)
+
+        data = {
+           '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$RBtnLstIsEfms$2',
+           '__EVENTARGUMENT': '',
+           '__LASTFOCUS': '',
+           '__VIEWSTATE': viewState,
+           '__VIEWSTATEENCRYPTED': '',
+           '__EVENTVALIDATION': validation,
+           'ctl00$ContentPlaceHolder1$RBtnLst': 'W',
+           'ctl00$ContentPlaceHolder1$RBtnLstIsEfms': 'P',
+           'ctl00$ContentPlaceHolder1$HiddenField1': ''
+        }
+
+        response = requests.post(bankurl,cookies=cookies, data=data)
+        if response.status_code==200:
+          myhtml=response.content
+          error,postTable=validateNICReport(logger,pobj,myhtml,jobcardPrefix=tableIdentifier)
+
+    baseURL="http://%s/netnrega/FTO/" % (pobj.crawlIP)
+    outhtml=''
+    outhtml+=getCenterAlignedHeading(pobj.locationName)
+    outhtml+=getCenterAlignedHeading("Financial Year: %s " % (getFullFinYear(finyear)))
+    if bankTable is not None:
+      outhtml+=getCenterAlignedHeading("Bank Table")
+      outhtml+=stripTableAttributesPreserveLinks(bankTable,"bankTable",baseURL)
+    if coBankTable is not None:
+      outhtml+=getCenterAlignedHeading("Cooperative Bank Table")
+      outhtml+=stripTableAttributesPreserveLinks(coBankTable,"coBankTable",baseURL)
+    if postTable is not None:
+      outhtml+=getCenterAlignedHeading("Post Office Table")
+      outhtml+=stripTableAttributesPreserveLinks(postTable,"postTable",baseURL)
+    outhtml=htmlWrapperLocal(title=reportName, head='<h1 aling="center">'+reportName+'</h1>', body=outhtml)
+
+    filename="%s_%s_%s_%s.html" % (reportType,pobj.districtSlug,pobj.districtCode,finyear)
+    filepath=pobj.districtFilepath.replace("filename",filename)
+    saveReport(logger,pobj,finyear,reportType,outhtml,filepath)
+
+def processBlockStat(logger,pobj,finyear):
+  reportType="ftoStats"
+  error,myhtml=getReportHTML(logger,pobj,reportType,finyear,locationType='district')
+  htmlsoup=BeautifulSoup(myhtml,"lxml")
+  bankTable=htmlsoup.find("table",id="bankTable")
+  p=makehash()
+  if bankTable is not None:
+    p=getFTOStatDataDict(logger,bankTable,p,paymentAgency="bank")  
+def getFTOStatDataDict(logger,myTable,p,paymentAgency=None):
+  rows=myTable.findAll('tr')
+  for row in rows:
+    cols=row.findAll('td')
+    if len(cols) == 20:
+      blockLinkA=cols[1].find("a")
+      if blockLinkA is not None:
+        blockURL=blockLinkA['href']
+        blockURLArray=blockURL.split("block_code=")
+        if len(blockURLArray) == 2:
+          rejectedURL=None
+          invalidURL=None
+          URLA=cols[18].find("a")
+          if URLA is not None:
+            invalidURL=URLA["href"]
+          rejectedURLA=cols[18].find("a")
+          if rejectedURLA is not None:
+            rejectedURL=rejectedURLA["href"]
+          blockCode=blockURLArray[1][:7]
+          p[blockCode][paymentAgency]['blockURL'] = blockURL
+          p[blockCode][paymentAgency]['totalTransactions']=cols[19].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['totalRejected']=cols[18].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['totalInvalid']=cols[17].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['totalProcessed']=cols[16].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['rejectedURL']=cols[16].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['totalProcessed']=cols[16].text.lstrip().rstrip()
 def getFTOListURLs(logger,pobj,finyear):
   urls=[]
   urlsRejected=[]

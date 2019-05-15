@@ -80,7 +80,7 @@ def main():
     cq=CrawlRequest.objects.filter(id=cqID).first()
     cobj=CrawlerObject(cq.id)
     pobj=LocationObject(cobj,code=locationCode)
-    createCodeObjDict(logger,pobj)
+    #createCodeObjDict(logger,pobj)
     if modelName is not None:
       if funcName == "dumpDataCSV":
         logger.info("I amhere")

@@ -111,9 +111,42 @@ def savePanchayatReport(logger,pobj,finyear,reportType,filedata,filepath,locatio
   myReport.reportURL=s3url
   myReport.save()
 
+def saveReport(logger,pobj,finyear,reportType,filedata,filepath,contentType=None):
+  if ((pobj.locationType is None) or (pobj.locationType == "panchayat")):
+    locationType='panchayat'
+    locationCode=pobj.panchayatCode
+  elif (pobj.locationType == "block"):
+    locationType='block'
+    locationCode=pobj.blockCode
+  elif (pobj.locationType == "district"):
+    locationType="district"
+    locationCode=pobj.districtCode
+
+  if contentType is None:
+    contentType="text/html"
+  else:
+    contentType=contentType
+  code="%s_%s_%s" % (locationCode,finyear,reportType)
+  logger.info(code)
+  myReport=Report.objects.filter(code=code).first()
+  if myReport is None:
+    if locationType == "district":
+      myReport=Report.objects.create(district=pobj.district,finyear=finyear,reportType=reportType)
+    elif locationType == 'block':
+      myReport=Report.objects.create(block=pobj.block,finyear=finyear,reportType=reportType)
+    else:
+      myReport=Report.objects.create(panchayat=pobj.panchayat,finyear=finyear,reportType=reportType)
+
+  s3url=uploadReportAmazon(filepath,filedata,contentType)
+  myReport.reportURL=s3url
+  myReport.save()
+
+
 def getReportHTML(logger,pobj,reportType,finyear,locationType=None):
   myhtml=None
-  if locationType == 'block':
+  if locationType == 'district':
+    myReport=Report.objects.filter(district=pobj.district,finyear=finyear,reportType=reportType).first()
+  elif locationType == 'block':
     myReport=Report.objects.filter(block=pobj.block,finyear=finyear,reportType=reportType).first()
   else:
     myReport=Report.objects.filter(panchayat=pobj.panchayat,finyear=finyear,reportType=reportType).first()

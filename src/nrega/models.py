@@ -160,6 +160,7 @@ class GenericReport(models.Model):
       return str(self.id)
 #The below Model is used to store block and panchayat level reports
 class Report(models.Model):
+  district=models.ForeignKey('District',on_delete=models.CASCADE,null=True,blank=True)
   block=models.ForeignKey('Block',on_delete=models.CASCADE,null=True,blank=True)
   panchayat=models.ForeignKey('Panchayat',on_delete=models.CASCADE,null=True,blank=True)
   reportType=models.CharField(max_length=256)
@@ -169,10 +170,12 @@ class Report(models.Model):
   created=models.DateTimeField(auto_now_add=True)
   modified=models.DateTimeField(auto_now=True)
   class Meta:
-    unique_together = ('block', 'panchayat','reportType','finyear')  
+    unique_together = ('district','block', 'panchayat','reportType','finyear')  
     db_table = 'report'
   def __str__(self):
-    if self.block is not None:
+    if self.district is not None:
+      return self.district.name+"-"+self.reportType
+    elif self.block is not None:
       return self.block.name+"-"+self.reportType
     elif self.panchayat is not None:
       return self.panchayat.name+"-"+self.reportType
@@ -322,7 +325,21 @@ class JobcardStat(models.Model):
     else:
       displayJobcard=self.jobcard.jobcard
     return displayJobcard+"-"+self.finyear
-    
+
+class BlockStat(models.Model):
+  block=models.ForeignKey('Block',on_delete=models.CASCADE)
+  finyear=models.CharField(max_length=2)
+  code=models.CharField(max_length=256,db_index=True,blank=True,null=True)
+  transactionsTotal=models.IntegerField(blank=True,null=True)
+  processedTotal=models.IntegerField(blank=True,null=True)
+  rejectedTotal=models.IntegerField(blank=True,null=True)
+  invalidTotal=models.IntegerField(blank=True,null=True)
+  class Meta:
+    unique_together = ( 'block','finyear')  
+    db_table = 'blockStat'
+  def __str__(self):
+    return self.block.name+"-"+self.block.district.name
+      
 class PanchayatStat(models.Model):
   panchayat=models.ForeignKey('panchayat',on_delete=models.CASCADE)
   finyear=models.CharField(max_length=2)
@@ -1009,8 +1026,10 @@ def crawlRequest_post_save_receiver(sender,instance,*args,**kwargs):
 def report_post_save_receiver(sender,instance,*args,**kwargs):
   if instance.panchayat is not None:
     code="%s_%s_%s" % (instance.panchayat.code,instance.finyear,instance.reportType)
-  else:
+  elif instance.block is not None:
     code="%s_%s_%s" % (instance.block.code,instance.finyear,instance.reportType)
+  else:
+    code="%s_%s_%s" % (instance.district.code,instance.finyear,instance.reportType)
   if instance.code != code:
     instance.code=code
     instance.save()

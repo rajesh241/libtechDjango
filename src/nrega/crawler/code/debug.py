@@ -31,7 +31,7 @@ from django.db.models import F,Q,Sum,Count
 from django.db import models
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", djangoSettings)
 django.setup()
-from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Village,Worker,JobcardStat,Wagelist,WagelistTransaction,DPTransaction,FTO,Report,DemandWorkDetail,MISReportURL,PanchayatStat,RejectedPayment,FTOTransaction,WorkDetail,CrawlState,CrawlRequest
+from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Village,Worker,JobcardStat,Wagelist,WagelistTransaction,DPTransaction,FTO,Report,DemandWorkDetail,MISReportURL,PanchayatStat,RejectedPayment,FTOTransaction,WorkDetail,CrawlState,CrawlRequest,BlockStat
 from crawlerFunctions import crawlerMain
 #from nregaDownload import crawlerMain,PanchayatCrawler,computePanchayatStat,downloadMuster,downloadWagelist,createCodeObjDict,createDetailWorkPaymentReport,telanganaJobcardDownload,telanganaJobcardProcess,createWorkPaymentReportAP,processRejectedPayment,downloadRejectedPayment,processWagelist,processMuster,downloadMISDPReport,processMISDPReport,downloadJobcardStat,processJobcardStat,jobcardRegister,objectDownloadMain,downloadMusterNew,processWorkDemand,downloadWorkDemand,downloadJobcardStat,fetchOldMuster,objectProcessMain,computeJobcardStat,downloadJobcard,processJobcard,validateAndSave,getReportHTML,createWorkPaymentJSK,validateNICReport,updateObjectDownload,downloadWagelist,processWagelist,crawlFTORejectedPayment,processBlockRejectedPayment,matchTransactions,getFTOListURLs
 from crawlerFunctions import processWagelist,createCodeObjDict,LocationObject,CrawlerObject
@@ -59,6 +59,7 @@ def argsFetch():
   parser.add_argument('-t1', '--test1', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=1)
   parser.add_argument('-ti', '--testInput', help='Test Input', required=False)
   parser.add_argument('-sf', '--startFinYear', help='Test Input', required=False)
+  parser.add_argument('-ef', '--endFinYear', help='Test Input', required=False)
   parser.add_argument('-ti2', '--testInput2', help='Test Input', required=False)
   parser.add_argument('-f', '--finyear', help='Test Input', required=False)
 
@@ -101,6 +102,17 @@ def main():
    #  stateURL="http://nregasp2.nic.in/netnrega/homestciti.aspx?state_code=34&state_name=JHARKHAND" % (
     crawlerMain(logger,cqID)
   if args['test']:
+    bs=BlockStat.objects.all()
+    for obj in bs:
+      obj.save()
+    exit(0)
+    myDistrict=District.objects.all()
+    startFinYear='17'
+    endFinYear='19'
+    sequenceType='dd'
+    for obj in myDistrict:
+      cr=CrawlRequest.objects.create(district=obj,endFinYear=endFinYear,startFinYear=startFinYear,sequenceType=sequenceType)        
+    exit(0)
     objs=Muster.objects.filter(panchayat__block__code='3401005',isDownloaded=True,allWorkerFound=False)
     i=0
     for obj in objs:
@@ -151,6 +163,9 @@ def main():
             logger.info(myWorker.id)
             myWorker.save()
   if args['populate']:
+    endFinYear=getCurrentFinYear()
+    if args['endFinYear']:
+      endFinYear=args['endFinYear']
     if args['sequenceType']:
       sequenceType=args['sequenceType']
     else:
@@ -166,6 +181,9 @@ def main():
     elif len(code) == 7:
       obj=Block.objects.filter(code=code).first()
       cr=CrawlRequest.objects.create(block=obj,startFinYear=startFinYear,sequenceType=sequenceType)        
+    elif len(code) == 4:
+      obj=District.objects.filter(code=code).first()
+      cr=CrawlRequest.objects.create(district=obj,endFinYear=endFinYear,startFinYear=startFinYear,sequenceType=sequenceType)        
   logger.info("...END PROCESSING") 
   exit(0)
 if __name__ == '__main__':

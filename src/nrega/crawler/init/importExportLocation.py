@@ -139,6 +139,7 @@ def main():
       p=dict()
       p['stateCode']=eachState.code
       p['name']=eachState.name
+      p['englistName']=eachState.englishName
       p['crawlIP']=eachState.crawlIP
       p['isNIC']=eachState.isNIC
       p['stateShortCode']=eachState.stateShortCode
@@ -161,7 +162,6 @@ def main():
     with open('crawlStates.json', 'w') as f:
       json.dump(d, f, ensure_ascii=False)
 
-    exit(0)
     allDistricts=District.objects.all()
     d=dict()
     for eachDistrict in allDistricts:
@@ -169,10 +169,10 @@ def main():
       p=dict()
       p['stateCode']=eachDistrict.state.code
       p['name']=eachDistrict.name
+      p['englishName']=eachDistrict.englishName
       d[eachDistrict.code]=p
     with open('/tmp/districts.json', 'w') as f:
       json.dump(d, f, ensure_ascii=False)
-    exit(0)
     allBlocks=Block.objects.all()
     d=dict()
     for eachBlock in allBlocks:
@@ -180,6 +180,7 @@ def main():
       p=dict()
       p['districtCode']=eachBlock.district.code
       p['name']=eachBlock.name
+      p['englishName']=eachBlock.englishName
       d[eachBlock.code]=p
     with open('/tmp/blocks.json', 'w') as f:
       json.dump(d, f, ensure_ascii=False)
@@ -190,6 +191,7 @@ def main():
       p=dict()
       p['blockCode']=eachPanchayat.block.code
       p['name']=eachPanchayat.name
+      p['englishName']=eachPanchayat.englishName
       d[eachPanchayat.code]=p
     with open('/tmp/panchayats.json', 'w') as f:
       json.dump(d, f, ensure_ascii=False)

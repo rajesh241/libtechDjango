@@ -188,6 +188,7 @@ class CrawlState(models.Model):
   minhour=models.PositiveSmallIntegerField(default=6)
   maxhour=models.PositiveSmallIntegerField(default=21)
   isBlockLevel=models.BooleanField(default=False)
+  isDistrictLevel=models.BooleanField(default=False)
   needFullBlockData=models.BooleanField(default=False)
   iterateFinYear=models.BooleanField(default=True)
   class Meta:
@@ -199,6 +200,7 @@ class CrawlRequest(models.Model):
   libtechTag=models.ManyToManyField('LibtechTag',related_name="crawlReqeustTag",blank=True)
   panchayat=models.ForeignKey('panchayat',on_delete=models.CASCADE,null=True,blank=True)
   block=models.ForeignKey('block',on_delete=models.CASCADE,null=True,blank=True)
+  district=models.ForeignKey('district',on_delete=models.CASCADE,null=True,blank=True)
   crawlState=models.ForeignKey('CrawlState',on_delete=models.SET_NULL,null=True,blank=True)
   source=models.CharField(max_length=256,default="test")
   sequenceType=models.CharField(max_length=256,default="default")
@@ -226,6 +228,8 @@ class CrawlRequest(models.Model):
       return "%s-%s-%s-%s-%s" % (self.panchayat.code,self.panchayat.block.district.state.name,self.panchayat.block.district.name,self.panchayat.block.name,self.panchayat.name)
     elif self.block is not  None:
       return "%s-%s-%s-%s" % (self.block.code,self.block.district.state.name,self.block.district.name,self.block.name)
+    elif self.district is not  None:
+      return "%s-%s-%s" % (self.district.code,self.district.state.name,self.district.name)
     else:
       return self.id
 
@@ -330,10 +334,31 @@ class BlockStat(models.Model):
   block=models.ForeignKey('Block',on_delete=models.CASCADE)
   finyear=models.CharField(max_length=2)
   code=models.CharField(max_length=256,db_index=True,blank=True,null=True)
-  transactionsTotal=models.IntegerField(blank=True,null=True)
-  processedTotal=models.IntegerField(blank=True,null=True)
-  rejectedTotal=models.IntegerField(blank=True,null=True)
-  invalidTotal=models.IntegerField(blank=True,null=True)
+
+  bankTotalTransactions=models.IntegerField(blank=True,null=True,default=0)
+  bankTotalTransactions=models.IntegerField(blank=True,null=True,default=0)
+  bankTotalRejected=models.IntegerField(blank=True,null=True,default=0)
+  bankTotalInvalid=models.IntegerField(blank=True,null=True,default=0)
+  bankTotalProcessed=models.IntegerField(blank=True,null=True,default=0)
+  bankRejectedURL=models.URLField(max_length=2048,blank=True,null=True)
+  bankInvalidURL=models.URLField(max_length=2048,blank=True,null=True)
+
+  postTotalTransactions=models.IntegerField(blank=True,null=True,default=0)
+  postTotalTransactions=models.IntegerField(blank=True,null=True,default=0)
+  postTotalRejected=models.IntegerField(blank=True,null=True,default=0)
+  postTotalInvalid=models.IntegerField(blank=True,null=True,default=0)
+  postTotalProcessed=models.IntegerField(blank=True,null=True,default=0)
+  postRejectedURL=models.URLField(max_length=2048,blank=True,null=True)
+  postInvalidURL=models.URLField(max_length=2048,blank=True,null=True)
+
+  coBankTotalTransactions=models.IntegerField(blank=True,null=True,default=0)
+  coBankTotalTransactions=models.IntegerField(blank=True,null=True,default=0)
+  coBankTotalRejected=models.IntegerField(blank=True,null=True,default=0)
+  coBankTotalInvalid=models.IntegerField(blank=True,null=True,default=0)
+  coBankTotalProcessed=models.IntegerField(blank=True,null=True,default=0)
+  coBankRejectedURL=models.URLField(max_length=2048,blank=True,null=True)
+  coBankInvalidURL=models.URLField(max_length=2048,blank=True,null=True)
+
   class Meta:
     unique_together = ( 'block','finyear')  
     db_table = 'blockStat'
@@ -942,6 +967,12 @@ def village_post_save_receiver(sender,instance,*args,**kwargs):
     instance.save()
 
 
+
+def blockStat_post_save_receiver(sender,instance,*args,**kwargs):
+  code="%s_%s_%s" % (instance.block.district.state.name,instance.block.district.name,instance.block.code)
+  if instance.code != code:
+    instance.code=code
+    instance.save()
 def panchayatStat_post_save_receiver(sender,instance,*args,**kwargs):
   code="%s_%s" % (instance.panchayat.code,instance.finyear)
   if instance.code != code:
@@ -1036,6 +1067,7 @@ def report_post_save_receiver(sender,instance,*args,**kwargs):
 #  print(instance.__class__.__name__)
 post_save.connect(report_post_save_receiver,sender=Report)
 post_save.connect(panchayatStat_post_save_receiver,sender=PanchayatStat)
+post_save.connect(blockStat_post_save_receiver,sender=BlockStat)
 post_save.connect(worker_post_save_receiver,sender=Worker)
 post_save.connect(jobcard_post_save_receiver,sender=Jobcard)
 post_save.connect(muster_post_save_receiver,sender=Muster)

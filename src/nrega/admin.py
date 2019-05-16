@@ -4,7 +4,7 @@ from django.utils.safestring import mark_safe
 
 import time
 # Register your models here.
-from .models import State,District,Block,Panchayat,Muster,Wagelist,FTO,CrawlQueue,Report,Jobcard,LibtechTag,Worker,APWorkPayment,Village,PanchayatCrawlInfo,PanchayatStat,WagelistTransaction,DPTransaction,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,JobcardStat,CrawlState,CrawlRequest,PaymentTransaction,WorkPayment
+from .models import State,District,Block,Panchayat,Muster,Wagelist,FTO,CrawlQueue,Report,Jobcard,LibtechTag,Worker,APWorkPayment,Village,PanchayatCrawlInfo,PanchayatStat,WagelistTransaction,DPTransaction,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,JobcardStat,CrawlState,CrawlRequest,PaymentTransaction,WorkPayment,BlockStat
 from .actions import download_reports_zip,setisError,setisProcessedFalse,setisActiveFalse,setisActiveTrue,removeTags,setIsSampleFalse,resetTaskInProgress,resetStepStarted,setInProgress,resetInProgress,resetAttemptCount,export_as_csv_action
 from config.defines import hostname,hostport
 
@@ -65,6 +65,11 @@ class panchayatCrawlInfoModelAdmin(admin.ModelAdmin):
   list_display=["id","panchayat"]
   readonly_fields=["panchayat"]
   search_fields=["panchayat__code"]
+class blockStatModelAdmin(admin.ModelAdmin):
+  actions = [export_as_csv_action("CSV Export")]
+  list_display=["id","block","finyear"]
+  readonly_fields=["block"]
+  search_fields=["block__code","block__district__code"]
 class panchayatStatModelAdmin(admin.ModelAdmin):
   actions = [export_as_csv_action("CSV Export")]
   list_display=["id","panchayat","finyear","zeroMusters"]
@@ -74,7 +79,7 @@ class crawlRequestModelAdmin(admin.ModelAdmin):
   actions=[resetAttemptCount,setInProgress,resetInProgress]
   list_display = ["id","__str__","crawlState","inProgress","processName","priority","attemptCount","modified"]
   readonly_fields=["panchayat","block","progress"]
-  list_filter=["source","inProgress","crawlState__name","attemptCount","panchayat__block__district__state__name"]
+  list_filter=["source","inProgress","isComplete","sequenceType","crawlState__name","attemptCount","panchayat__block__district__state__name"]
   search_fields=["panchayat__code"]
 class crawlStateModelAdmin(admin.ModelAdmin):
   list_display=["name","sequence"]
@@ -225,4 +230,5 @@ admin.site.register(CrawlState,crawlStateModelAdmin)
 admin.site.register(CrawlRequest,crawlRequestModelAdmin)
 admin.site.register(PaymentTransaction,paymentTransactionModelAdmin)
 admin.site.register(WorkPayment,workPaymentModelAdmin)
+admin.site.register(BlockStat,blockStatModelAdmin)
 # Register your models here.

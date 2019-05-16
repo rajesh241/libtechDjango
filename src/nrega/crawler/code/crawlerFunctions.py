@@ -37,7 +37,7 @@ from nrega import models as nregamodels
 from nrega.crawler.commons.nregaFunctions import getCurrentFinYear,stripTableAttributes,getCenterAlignedHeading,htmlWrapperLocal,getFullFinYear,correctDateFormat,table2csv,array2HTMLTable,getDateObj,stripTableAttributesPreserveLinks,getFinYear
 from nrega.crawler.commons.nregaSettings import statsURL,telanganaStateCode,crawlerTimeThreshold,delayPaymentThreshold,crawlerErrorTimeThreshold
 from nrega.crawler.code.commons import saveReport,savePanchayatReport,uploadReportAmazon,getjcNumber,isReportUpdated,getReportHTML,validateAndSave,validateNICReport,csv_from_excel
-from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Jobcard,PanchayatCrawlInfo,Worker,PanchayatStat,Village,Wagelist,FTO,WagelistTransaction,JobcardStat,DPTransaction,FTOTransaction,APWorkPayment,Report,WorkerStat,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,CrawlRequest,CrawlState,PaymentTransaction,WorkPayment
+from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Jobcard,PanchayatCrawlInfo,Worker,PanchayatStat,Village,Wagelist,FTO,WagelistTransaction,JobcardStat,DPTransaction,FTOTransaction,APWorkPayment,Report,WorkerStat,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,CrawlRequest,CrawlState,PaymentTransaction,WorkPayment,BlockStat
 from nrega.crawler.code.delayURLs import delayURLs
 
 musterregex=re.compile(r'<input+.*?"\s*/>+',re.DOTALL)
@@ -63,14 +63,17 @@ class CrawlerObject:
     self.downloadStage=cq.crawlState.name
     self.sequence=cq.crawlState.sequence
     self.isBlockLevel=cq.crawlState.isBlockLevel
+    self.isDistrictLevel=cq.crawlState.isDistrictLevel
     self.needFullBlockData=cq.crawlState.needFullBlockData
     self.iterateFinYear=cq.crawlState.iterateFinYear
     self.attemptCount=cq.attemptCount
     self.remarks=''
     if cq.panchayat is not None:
       self.locationCode=cq.panchayat.code
-    else:
+    elif cq.block is not None:
       self.locationCode=cq.block.code
+    else:
+      self.locationCode=cq.district.code
      
 class LocationObject:
   def __init__(self, cobj, code=None):
@@ -102,6 +105,7 @@ class LocationObject:
       districtObj=District.objects.filter(code=code).first()
       stateObj=districtObj.state
 
+    self.error=False
     self.searchIP="mnregaweb4.nic.in"
     self.stateCode=stateObj.code
     self.stateName=stateObj.name
@@ -124,7 +128,6 @@ class LocationObject:
     if ((self.locationType=='panchayat') or (self.locationType=='block')):
       self.blockFilepath="%s/%s/%s/%s/%s/%s/%s" % ("nrega",self.stateSlug,self.districtSlug,self.blockSlug,"DATA","NICREPORTS","filename")
       self.dataFilepath="%s/%s/%s/%s/%s/%s" % ("DATA",self.stateSlug,self.districtSlug,self.blockSlug,"foldername","filename")
-      self.error=False
       self.blockCode=blockObj.code
       self.block=blockObj
       self.blockID=blockObj.id
@@ -189,7 +192,7 @@ def crawlNICPanchayat(logger,lobj,downloadStage=None):
     downloadStage=lobj.cobj.downloadStage
   if lobj.locationType == "block":
     logger.info("Running Crawl for Block %s-%s-%s for stage %s" % (str(lobj.cobj.id),lobj.blockCode,lobj.blockName,downloadStage))
-  else:
+  elif lobj.locationType == "panchayat":
     logger.info("Running Crawl for Panchayat %s-%s-%s for stage %s" % (str(lobj.cobj.id),lobj.panchayatCode,lobj.panchayatName,downloadStage))
   
   finyearArray=[]
@@ -200,7 +203,9 @@ def crawlNICPanchayat(logger,lobj,downloadStage=None):
       finyearArray.append(str(finyear))
    
   locationCodeArray=[]
-  if cobj.isBlockLevel == True:
+  if cobj.isDistrictLevel == True:
+    locationCodeArray.append(lobj.districtCode)
+  elif cobj.isBlockLevel == True:
     locationCodeArray.append(lobj.blockCode)
   elif ((cobj.needFullBlockData == False) and (lobj.locationType == "panchayat")):
     locationCodeArray.append(lobj.panchayatCode)
@@ -218,8 +223,12 @@ def crawlNICPanchayat(logger,lobj,downloadStage=None):
     for finyear in finyearArray:
       logger.info(f'Crawling for { pobj.displayName } for finyear { finyear } downloadStage { downloadStage }')
 
+      if (downloadStage == "ddInit"):
+        error=getBlockStat(logger,pobj,finyear)
+        if error is not None:
+          return error
 
-      if (downloadStage == "init"):
+      elif (downloadStage == "init"):
         try:
           PanchayatStat.objects.create(finyear=finyear,panchayat=pobj.panchayat)
         except:
@@ -338,7 +347,7 @@ def crawlNICPanchayat(logger,lobj,downloadStage=None):
   if nextCrawlState is not None:
     cq=CrawlRequest.objects.filter(id=cobj.id).first()
     cq.crawlState=nextCrawlState
-    if ( (nextCrawlState.name == "complete") or (nextCrawlState.name == "telanganaComplete")):
+    if ( (nextCrawlState.name == "ddComplete") or (nextCrawlState.name == "complete") or (nextCrawlState.name == "telanganaComplete")):
       cq.isComplete=True
     cq.save() 
   return error
@@ -1091,7 +1100,10 @@ def getBlockStat(logger,pobj,finyear):
   mru=MISReportURL.objects.filter(state__code=pobj.stateCode,finyear=finyear).first()
   urlPrefix="http://mnregaweb4.nic.in/netnrega/FTO/"
   fullFinYear=getFullFinYear(finyear)
-  if mru is not None:
+  error=None
+  if mru is  None:
+    error="unable to find mru"
+  else:
     bankTable=None
     postTable=None
     coBankTable=None
@@ -1104,53 +1116,62 @@ def getBlockStat(logger,pobj,finyear):
       myhtml=r.content
       htmlsoup=BeautifulSoup(myhtml,"lxml")
       a=htmlsoup.find("a", href=re.compile(s))
-      bankurl="%s%s" % (urlPrefix,a['href'])
-      logger.info(bankurl)
-      r=requests.get(bankurl)
-      if r.status_code == 200:
-        cookies=r.cookies
-        myhtml=r.content
-        error,bankTable=validateNICReport(logger,pobj,myhtml,jobcardPrefix=tableIdentifier)
-        htmlsoup=BeautifulSoup(myhtml,"lxml")
-        try:
-          validation = htmlsoup.find(id='__EVENTVALIDATION').get('value',None)
-        except:
-          validation=''
-        viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
-        data = {
-           '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$RBtnLstIsEfms$2',
-           '__EVENTARGUMENT': '',
-           '__LASTFOCUS': '',
-           '__VIEWSTATE': viewState,
-           '__VIEWSTATEENCRYPTED': '',
-           '__EVENTVALIDATION': validation,
-           'ctl00$ContentPlaceHolder1$RBtnLst': 'W',
-           'ctl00$ContentPlaceHolder1$RBtnLstIsEfms': 'C',
-           'ctl00$ContentPlaceHolder1$HiddenField1': ''
-        }
+      if a is not None:
+        bankurl="%s%s" % (urlPrefix,a['href'])
+        logger.info(bankurl)
+        r=requests.get(bankurl)
+        if r.status_code == 200:
+          cookies=r.cookies
+          myhtml=r.content
+          error,bankTable=validateNICReport(logger,pobj,myhtml,jobcardPrefix=tableIdentifier)
+          htmlsoup=BeautifulSoup(myhtml,"lxml")
+          try:
+            validation = htmlsoup.find(id='__EVENTVALIDATION').get('value',None)
+          except:
+            validation=''
+          viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
+          data = {
+             '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$RBtnLstIsEfms$2',
+             '__EVENTARGUMENT': '',
+             '__LASTFOCUS': '',
+             '__VIEWSTATE': viewState,
+             '__VIEWSTATEENCRYPTED': '',
+             '__EVENTVALIDATION': validation,
+             'ctl00$ContentPlaceHolder1$RBtnLst': 'W',
+             'ctl00$ContentPlaceHolder1$RBtnLstIsEfms': 'C',
+             'ctl00$ContentPlaceHolder1$HiddenField1': ''
+          }
 
-        response = requests.post(bankurl,cookies=cookies, data=data)
-        if response.status_code==200:
-          myhtml=response.content
-          error,coBankTable=validateNICReport(logger,pobj,myhtml,jobcardPrefix=tableIdentifier)
+          response = requests.post(bankurl,cookies=cookies, data=data)
+          if response.status_code==200:
+            myhtml=response.content
+            error,coBankTable=validateNICReport(logger,pobj,myhtml,jobcardPrefix=tableIdentifier)
+          else:
+            error="Unable to download cobank table"
 
-        data = {
-           '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$RBtnLstIsEfms$2',
-           '__EVENTARGUMENT': '',
-           '__LASTFOCUS': '',
-           '__VIEWSTATE': viewState,
-           '__VIEWSTATEENCRYPTED': '',
-           '__EVENTVALIDATION': validation,
-           'ctl00$ContentPlaceHolder1$RBtnLst': 'W',
-           'ctl00$ContentPlaceHolder1$RBtnLstIsEfms': 'P',
-           'ctl00$ContentPlaceHolder1$HiddenField1': ''
-        }
+          data = {
+             '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$RBtnLstIsEfms$2',
+             '__EVENTARGUMENT': '',
+             '__LASTFOCUS': '',
+             '__VIEWSTATE': viewState,
+             '__VIEWSTATEENCRYPTED': '',
+             '__EVENTVALIDATION': validation,
+             'ctl00$ContentPlaceHolder1$RBtnLst': 'W',
+             'ctl00$ContentPlaceHolder1$RBtnLstIsEfms': 'P',
+             'ctl00$ContentPlaceHolder1$HiddenField1': ''
+          }
 
-        response = requests.post(bankurl,cookies=cookies, data=data)
-        if response.status_code==200:
-          myhtml=response.content
-          error,postTable=validateNICReport(logger,pobj,myhtml,jobcardPrefix=tableIdentifier)
+          response = requests.post(bankurl,cookies=cookies, data=data)
+          if response.status_code==200:
+            myhtml=response.content
+            error,postTable=validateNICReport(logger,pobj,myhtml,jobcardPrefix=tableIdentifier)
+          else:
+            error="Unable to download post table"
 
+        else:
+          error="unable to download district URL %s " % bankurl
+    else:
+      error="unable to download %s " % url
     baseURL="http://%s/netnrega/FTO/" % (pobj.crawlIP)
     outhtml=''
     outhtml+=getCenterAlignedHeading(pobj.locationName)
@@ -1169,41 +1190,64 @@ def getBlockStat(logger,pobj,finyear):
     filename="%s_%s_%s_%s.html" % (reportType,pobj.districtSlug,pobj.districtCode,finyear)
     filepath=pobj.districtFilepath.replace("filename",filename)
     saveReport(logger,pobj,finyear,reportType,outhtml,filepath)
-
+    processBlockStat(logger,pobj,finyear)
+  return error
 def processBlockStat(logger,pobj,finyear):
   reportType="ftoStats"
   error,myhtml=getReportHTML(logger,pobj,reportType,finyear,locationType='district')
   htmlsoup=BeautifulSoup(myhtml,"lxml")
-  bankTable=htmlsoup.find("table",id="bankTable")
   p=makehash()
+  bankTable=htmlsoup.find("table",id="bankTable")
   if bankTable is not None:
     p=getFTOStatDataDict(logger,bankTable,p,paymentAgency="bank")  
+  postTable=htmlsoup.find("table",id="postTable")
+  if postTable is not None:
+    p=getFTOStatDataDict(logger,postTable,p,paymentAgency="post")  
+  coBankTable=htmlsoup.find("table",id="coBankTable")
+  if coBankTable is not None:
+    p=getFTOStatDataDict(logger,coBankTable,p,paymentAgency="coBank")  
+ # logger.info(p)
+  for blockCode,bdict in p.items():
+    #logger.info(blockCode)
+    myBlock=Block.objects.filter(code=blockCode).first()
+    if myBlock is not None:
+      bs=BlockStat.objects.filter(block=myBlock,finyear=finyear).first()
+      if bs is None:
+        bs=BlockStat.objects.create(block=myBlock,finyear=finyear)
+      for paymentAgency,pdict in bdict.items():
+        for key,value in pdict.items():
+          attrName=paymentAgency+key
+          setattr(bs,attrName,value)
+          #logger.info(attrName)
+      bs.save()
+           
 def getFTOStatDataDict(logger,myTable,p,paymentAgency=None):
   rows=myTable.findAll('tr')
   for row in rows:
     cols=row.findAll('td')
     if len(cols) == 20:
-      blockLinkA=cols[1].find("a")
+      blockLinkA=cols[3].find("a")
       if blockLinkA is not None:
         blockURL=blockLinkA['href']
         blockURLArray=blockURL.split("block_code=")
         if len(blockURLArray) == 2:
           rejectedURL=None
           invalidURL=None
-          URLA=cols[18].find("a")
+          URLA=cols[17].find("a")
           if URLA is not None:
             invalidURL=URLA["href"]
           rejectedURLA=cols[18].find("a")
           if rejectedURLA is not None:
             rejectedURL=rejectedURLA["href"]
           blockCode=blockURLArray[1][:7]
-          p[blockCode][paymentAgency]['blockURL'] = blockURL
-          p[blockCode][paymentAgency]['totalTransactions']=cols[19].text.lstrip().rstrip()
-          p[blockCode][paymentAgency]['totalRejected']=cols[18].text.lstrip().rstrip()
-          p[blockCode][paymentAgency]['totalInvalid']=cols[17].text.lstrip().rstrip()
-          p[blockCode][paymentAgency]['totalProcessed']=cols[16].text.lstrip().rstrip()
-          p[blockCode][paymentAgency]['rejectedURL']=cols[16].text.lstrip().rstrip()
-          p[blockCode][paymentAgency]['totalProcessed']=cols[16].text.lstrip().rstrip()
+         # p[blockCode][paymentAgency]['blockURL'] = blockURL
+          p[blockCode][paymentAgency]['TotalTransactions']=cols[19].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['TotalRejected']=cols[18].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['TotalInvalid']=cols[17].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['TotalProcessed']=cols[16].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['RejectedURL']=rejectedURL
+          p[blockCode][paymentAgency]['InvalidURL']=invalidURL
+  return p
 def getFTOListURLs(logger,pobj,finyear):
   urls=[]
   urlsRejected=[]
@@ -1609,15 +1653,16 @@ def createCodeObjDict(logger,pobj,modelArray=None,codeType=None):
   if modelArray is None:
     modelArray=["Worker","Jobcard","Muster","Wagelist","FTO"]
   pobj.codeObjDict={} #makehash()
-  for modelName in modelArray:
-    if modelName == "FTO":
-      myobjs=getattr(nregamodels,modelName).objects.filter(block=pobj.block)
-    elif modelName == "Worker":
-      myobjs=getattr(nregamodels,modelName).objects.filter(jobcard__panchayat__block=pobj.block)
-    else:
-      myobjs=getattr(nregamodels,modelName).objects.filter(panchayat__block=pobj.block)
-    for obj in myobjs:
-      pobj.codeObjDict[obj.code]=obj
+  if hasattr(pobj, 'block'):
+    for modelName in modelArray:
+      if modelName == "FTO":
+        myobjs=getattr(nregamodels,modelName).objects.filter(block=pobj.block)
+      elif modelName == "Worker":
+        myobjs=getattr(nregamodels,modelName).objects.filter(jobcard__panchayat__block=pobj.block)
+      else:
+        myobjs=getattr(nregamodels,modelName).objects.filter(panchayat__block=pobj.block)
+      for obj in myobjs:
+        pobj.codeObjDict[obj.code]=obj
     logger.info("Finished dict of %s" % str(modelName))
 
 def objectProcessMain(logger,pobj,modelName,finyear):

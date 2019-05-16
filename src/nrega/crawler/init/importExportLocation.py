@@ -57,6 +57,7 @@ def main():
       obj.name=values['name']
       obj.crawlIP=values['crawlIP']
       obj.isNIC=values['isNIC']
+      obj.englishName=values['englishName']
       obj.stateShortCode=values['stateShortCode']
       obj.save()
     # Now populating Districsts Block and Panchayats
@@ -92,6 +93,7 @@ def main():
             else:
               eachPanchayat.name=panchayatName
               eachPanchayat.block=eachBlock
+              eachPanchayat.englishName=values['englishName']
               eachPanchayat.save()
           else:
             logger.info("Block with code %s does not exists" % blockCode)
@@ -109,6 +111,7 @@ def main():
             else:
               eachBlock.district=eachDistrict
               eachBlock.name=blockName
+              eachBlock.englishName=values['englishName']
               eachBlock.save()
           else:
             logger.info("District with code %s does not exist" % (districtCode))
@@ -124,8 +127,9 @@ def main():
             if eachDistrict is None:
               eachDistrict=District.objects.create(code=districtCode,state=eachState,name=districtName)
             else:
-              eachDisctrict.state=eachState
+              eachDistrict.state=eachState
               eachDistrict.name=districtName
+              eachDistrict.englishName=values['englishName']
               eachDistrict.save()
           else:
             logger.info("State with code %s does not exist" % (stateCode))
@@ -139,7 +143,7 @@ def main():
       p=dict()
       p['stateCode']=eachState.code
       p['name']=eachState.name
-      p['englistName']=eachState.englishName
+      p['englishName']=eachState.englishName
       p['crawlIP']=eachState.crawlIP
       p['isNIC']=eachState.isNIC
       p['stateShortCode']=eachState.stateShortCode

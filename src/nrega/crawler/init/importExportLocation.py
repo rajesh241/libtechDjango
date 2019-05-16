@@ -156,12 +156,13 @@ def main():
       p['minhour']=cs.minhour
       p['maxhour']=cs.maxhour
       p['isBlockLevel']=cs.isBlockLevel
+      p['isDistrictLevel']=cs.isDistrictLevel
       p['needFullBlockData']=cs.needFullBlockData
       p['iterateFinYear']=cs.iterateFinYear
       d[cs.name]=p
     with open('crawlStates.json', 'w') as f:
       json.dump(d, f, ensure_ascii=False)
-
+    exit(0)
     allDistricts=District.objects.all()
     d=dict()
     for eachDistrict in allDistricts:

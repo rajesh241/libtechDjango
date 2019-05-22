@@ -68,20 +68,12 @@ def uploadReportAmazon(filepath,filedata,contentType):
   return s3url
 
 
-def isReportUpdated(logger,pobj,finyear,reportType,locationType=None,reportThreshold=None):
+def isReportUpdated(logger,pobj,finyear,reportType,reportThreshold=None):
   isUpdated=False
   if reportThreshold is None:
     reportThreshold = datetime.now() - timedelta(days=3)
   logger.info(reportThreshold)
-  if locationType is None:
-    locationType='panchayat'
-    locationCode=pobj.panchayatCode
-  else:
-    locationType='block'
-    locationCode=pobj.blockCode
-  code="%s_%s_%s" % (locationCode,finyear,reportType)
-  logger.info(code)
-  myReport=Report.objects.filter(code=code,modified__gt=reportThreshold).first()
+  myReport=Report.objects.filter(location=pobj,reportType=reportType,finyear=finyear,modified__gt=reportThreshold).first()
   logger.info(myReport)
   if myReport is not None:
     isUpdated=True
@@ -111,7 +103,25 @@ def savePanchayatReport(logger,pobj,finyear,reportType,filedata,filepath,locatio
   myReport.reportURL=s3url
   myReport.save()
 
-def saveReport(logger,pobj,finyear,reportType,filedata,filepath,contentType=None):
+def saveReport(logger,pobj,finyear,reportType,filedata,contentType=None):
+  if contentType is None:
+    contentType="text/html"
+  else:
+    contentType=contentType
+  if contentType == "text/csv":
+    reportExtension="csv"
+  else:
+    reportExtension="html"
+  myReport=Report.objects.filter(location=pobj,finyear=finyear,reportType=reportType).first()
+  if myReport is None:
+    myReport=Report.objects.create(location=pobj,finyear=finyear,reportType=reportType)
+  filename="%s_%s_%s_%s.%s" % (reportType,pobj.slug,pobj.code,finyear,reportExtension)
+  filepath=pobj.filepath.replace("filename",filename)
+  s3url=uploadReportAmazon(filepath,filedata,contentType)
+  myReport.reportURL=s3url
+  myReport.save()
+    
+def saveReportOld(logger,pobj,finyear,reportType,filedata,filepath,contentType=None):
   if ((pobj.locationType is None) or (pobj.locationType == "panchayat")):
     locationType='panchayat'
     locationCode=pobj.panchayatCode
@@ -144,12 +154,13 @@ def saveReport(logger,pobj,finyear,reportType,filedata,filepath,contentType=None
 
 def getReportHTML(logger,pobj,reportType,finyear,locationType=None):
   myhtml=None
-  if locationType == 'district':
-    myReport=Report.objects.filter(district=pobj.district,finyear=finyear,reportType=reportType).first()
-  elif locationType == 'block':
-    myReport=Report.objects.filter(block=pobj.block,finyear=finyear,reportType=reportType).first()
-  else:
-    myReport=Report.objects.filter(panchayat=pobj.panchayat,finyear=finyear,reportType=reportType).first()
+  myReport=Report.objects.filter(location=pobj,finyear=finyear,reportType=reportType).first()
+ #if locationType == 'district':
+ #  myReport=Report.objects.filter(district=pobj.district,finyear=finyear,reportType=reportType).first()
+ #elif locationType == 'block':
+ #  myReport=Report.objects.filter(block=pobj.block,finyear=finyear,reportType=reportType).first()
+ #else:
+ #  myReport=Report.objects.filter(panchayat=pobj.panchayat,finyear=finyear,reportType=reportType).first()
   if myReport is None:
     error="Report not found"
   else:
@@ -161,7 +172,7 @@ def getReportHTML(logger,pobj,reportType,finyear,locationType=None):
         error=None
       else:
         myhtml=None
-        error="Count not download %s " % str(reportURL)
+        error="Could not download %s " % str(reportURL)
     else:
       error="%s Report URL not found %s" % (str(myReport),finyear)
   return error,myhtml
@@ -182,22 +193,12 @@ def validateNICReport(logger,pobj,myhtml,jobcardPrefix=None):
 
 def validateAndSave(logger,pobj,myhtml,reportName,reportType,finyear=None,locationType=None,jobcardPrefix=None,preserveLinks=False,validate=True):
     error=None
-    if locationType==None:
-      locationType='panchayat'
-
     if finyear is None:
       finyearString=''
     else:
       finyearString="_"+finyear
-
-    if locationType == 'panchayat':
-      locationName="%s-%s-%s-%s" % (pobj.stateName,pobj.districtName,pobj.blockName,pobj.panchayatName)
-      filename="%s_%s_%s%s.html" % (reportType,pobj.panchayatSlug,pobj.panchayatCode,finyearString)
-      filepath=pobj.panchayatFilepath.replace("filename",filename)
-    else:
-      locationName="%s-%s-%s" % (pobj.stateName,pobj.districtName,pobj.blockName)
-      filename="%s_%s_%s%s.html" % (reportType,pobj.blockSlug,pobj.blockCode,finyearString)
-      filepath=pobj.blockFilepath.replace("filename",filename)
+    locationName=pobj.displayName
+    filepath=pobj.filepath
 
     if validate == True:
       outhtml=''
@@ -221,6 +222,6 @@ def validateAndSave(logger,pobj,myhtml,reportName,reportType,finyear=None,locati
         outhtml=outhtml.encode("UTF-8")
       except:
         outhtml=outhtml
-      savePanchayatReport(logger,pobj,finyear,reportType,outhtml,filepath,locationType=locationType)
+      saveReport(logger,pobj,finyear,reportType,outhtml)
     return error 
 

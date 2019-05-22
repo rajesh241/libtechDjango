@@ -4,12 +4,25 @@ from django.utils.safestring import mark_safe
 
 import time
 # Register your models here.
-from .models import State,District,Block,Panchayat,Muster,Wagelist,FTO,CrawlQueue,Report,Jobcard,LibtechTag,Worker,APWorkPayment,Village,PanchayatCrawlInfo,PanchayatStat,WagelistTransaction,DPTransaction,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,JobcardStat,CrawlState,CrawlRequest,PaymentTransaction,WorkPayment,BlockStat
+from .models import State,District,Block,Panchayat,Muster,Wagelist,FTO,CrawlQueue,Report,Jobcard,LibtechTag,Worker,APWorkPayment,Village,PanchayatCrawlInfo,PanchayatStat,WagelistTransaction,DPTransaction,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,JobcardStat,CrawlState,CrawlRequest,PaymentTransaction,WorkPayment,BlockStat,Location,Info
 from .actions import download_reports_zip,setisError,setisProcessedFalse,setisActiveFalse,setisActiveTrue,removeTags,setIsSampleFalse,resetTaskInProgress,resetStepStarted,setInProgress,resetInProgress,resetAttemptCount,export_as_csv_action
 from config.defines import hostname,hostport
 
 class stateModelAdmin(admin.ModelAdmin):
   list_display = ["name","stateShortCode","code","crawlIP"]
+  class Meta:
+    model=State
+
+class infoModelAdmin(admin.ModelAdmin):
+  list_display=["location","name","finyear","value"]
+  list_filter=["finyear","name"]
+  search_fields=["location__code","name","location__name"]
+  readonly_fields=["location"]
+class locationModelAdmin(admin.ModelAdmin):
+  list_display = ["name","stateShortCode","code","crawlIP"]
+  list_filter = ["locationType"]
+  search_fields=["code"]
+  readonly_fields = ["parentLocation"]
   class Meta:
     model=State
 
@@ -157,9 +170,9 @@ class workerModelAdmin(admin.ModelAdmin):
 class reportModelAdmin(admin.ModelAdmin):
   actions = [download_reports_zip]
   list_display=["__str__","finyear","get_reportFile","modified","code"]
-  readonly_fields=["panchayat","block","finyear","reportType"]
+  readonly_fields=["location","panchayat","block","finyear","reportType"]
   list_filter=["finyear","reportType"]
-  search_fields=["panchayat__name","panchayat__block__name","panchayat__code"]
+  search_fields=["location__code","panchayat__name","panchayat__block__name","panchayat__code"]
   def get_reportFile(self,obj):
     return mark_safe("<a href='%s'>Download</a>" % obj.reportURL)
   get_reportFile.allow_tags = True
@@ -231,4 +244,6 @@ admin.site.register(CrawlRequest,crawlRequestModelAdmin)
 admin.site.register(PaymentTransaction,paymentTransactionModelAdmin)
 admin.site.register(WorkPayment,workPaymentModelAdmin)
 admin.site.register(BlockStat,blockStatModelAdmin)
+admin.site.register(Location,locationModelAdmin)
+admin.site.register(Info,infoModelAdmin)
 # Register your models here.

@@ -14,7 +14,7 @@ from django.db.models import F,Q,Sum,Count
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", djangoSettings)
 django.setup()
 
-from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlState
+from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlState,Location
 
 def argsFetch():
   '''
@@ -27,6 +27,7 @@ def argsFetch():
   parser.add_argument('-n', '--name', help='Name of location that needs to be imported allowed values are {district,block,panchayat}', required=False)
   parser.add_argument('-e', '--export', help='Export Json Data', required=False,action='store_const', const=1)
   parser.add_argument('-i', '--import', help='import Json Data', required=False,action='store_const', const=1)
+  parser.add_argument('-p', '--populateLocation', help='Populate Locations', required=False,action='store_const', const=1)
   parser.add_argument('-t', '--test', help='A Test Loop', required=False,action='store_const', const=1)
 
   args = vars(parser.parse_args())
@@ -37,6 +38,24 @@ def main():
   args = argsFetch()
   logger = loggerFetch(args.get('log_level'))
   if args['test']:
+    objs=Location.objects.all()
+    for obj in objs:
+      if obj.locationType == 'state':
+        stateCode=obj.code
+        filepath="%s/%s/%s/%s/%s" % ("nrega",obj.slug,"DATA","NICREPORTS","filename")
+      elif obj.locationType == 'district':
+        stateCode=obj.parentLocation.code
+        filepath="%s/%s/%s/%s/%s/%s" % ("nrega",obj.parentLocation.slug,obj.slug,"DATA","NICREPORTS","filename")
+      elif obj.locationType == 'block':
+        stateCode=obj.parentLocation.parentLocation.code
+        filepath="%s/%s/%s/%s/%s/%s/%s" % ("nrega",obj.parentLocation.parentLocation.slug,obj.parentLocation.slug,obj.slug,"DATA","NICREPORTS","filename")
+      else:
+        stateCode=obj.parentLocation.parentLocation.parentLocation.code
+        filepath="%s/%s/%s/%s/%s/%s/%s/%s" % ("nrega",obj.parentLocation.parentLocation.parentLocation.slug,obj.parentLocation.parentLocation.slug,obj.parentLocation.slug,obj.slug,"DATA","NICREPORTS","filename")
+      obj.stateCode=stateCode
+      obj.filepath=filepath
+      obj.save()
+    exit(0)
     lts=LibtechTag.objects.all()
     for lt in lts:
       logger.info(lt.name)
@@ -133,7 +152,80 @@ def main():
               eachDistrict.save()
           else:
             logger.info("State with code %s does not exist" % (stateCode))
+  if args['populateLocation']:
+    objs=State.objects.all()
+    objs=State.objects.all()[:1]
+    for obj in objs:
+      try:
+        l=Location.objects.create(code=obj.code)
+      except:
+        l=Location.objects.filter(code=obj.code).first()
+      l.name=obj.name
+      l.englishName=obj.englishName
+      l.nameInLocalLanguage=obj.nameInLocalLanguage
+      l.crawlIP=obj.crawlIP
+      l.stateShortCode=obj.stateShortCode
+      l.isNIC=obj.isNIC
+      l.locationType='state'
+      l.displayName=obj.name
+      l.save()
+
+    objs=District.objects.all()
+    objs=District.objects.all()[:1]
+    for obj in objs:
+      try:
+        l=Location.objects.create(code=obj.code)
+      except:
+        l=Location.objects.filter(code=obj.code).first()
+      pl=Location.objects.filter(code=obj.state.code).first()
+      l.parentLocation=pl
+      l.name=obj.name
+      l.englishName=obj.englishName
+      l.nameInLocalLanguage=obj.nameInLocalLanguage
+      l.crawlIP=obj.state.crawlIP
+      l.stateShortCode=obj.state.stateShortCode
+      l.isNIC=obj.state.isNIC
+      l.locationType='district'
+      l.displayName="%s-%s" % (obj.state.name,obj.name)
+      l.save()
+
+    objs=Block.objects.all()
+    objs=Block.objects.all()[:1]
+    for obj in objs:
+      try:
+        l=Location.objects.create(code=obj.code)
+      except:
+        l=Location.objects.filter(code=obj.code).first()
+      pl=Location.objects.filter(code=obj.district.code).first()
+      l.parentLocation=pl
+      l.name=obj.name
+      l.englishName=obj.englishName
+      l.nameInLocalLanguage=obj.nameInLocalLanguage
+      l.crawlIP=obj.district.state.crawlIP
+      l.stateShortCode=obj.district.state.stateShortCode
+      l.isNIC=obj.district.state.isNIC
+      l.locationType='block'
+      l.displayName="%s-%s-%s" % (obj.district.state.name,obj.district.name,obj.name)
+      l.save()
  
+    objs=Panchayat.objects.all()
+    for obj in objs:
+      try:
+        l=Location.objects.create(code=obj.code)
+      except:
+        l=Location.objects.filter(code=obj.code).first()
+      pl=Location.objects.filter(code=obj.block.code).first()
+      l.parentLocation=pl
+      l.name=obj.name
+      l.englishName=obj.englishName
+      l.nameInLocalLanguage=obj.nameInLocalLanguage
+      l.crawlIP=obj.block.district.state.crawlIP
+      l.stateShortCode=obj.block.district.state.stateShortCode
+      l.isNIC=obj.block.district.state.isNIC
+      l.locationType='panchayat'
+      l.displayName="%s-%s-%s-%s" % (obj.block.district.state.name,obj.block.district.name,obj.block.name,obj.name)
+      l.save()
+     
   if args['export']:
     logger.info("Going to export location JSON Data")
     allStates=State.objects.all()

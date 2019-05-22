@@ -35,6 +35,42 @@ class LibtechTag(models.Model):
             }
     json_data = json.dumps(data)
     return json_data
+
+class Location(models.Model):
+  name=models.CharField(max_length=256)
+  displayName=models.CharField(max_length=2048)
+  locationType=models.CharField(max_length=64)
+  nameInLocalLanguage=models.BooleanField(default=False)
+  englishName=models.CharField(max_length=256,null=True,blank=True)
+  code=models.CharField(max_length=20,unique=True,db_index=True)
+  parentLocation=models.ForeignKey('self',on_delete=models.SET_NULL,blank=True,null=True)
+  slug=models.SlugField(blank=True) 
+  crawlIP=models.CharField(max_length=256,null=True,blank=True)
+  stateShortCode=models.CharField(max_length=2)
+  stateCode=models.CharField(max_length=2,null=True,blank=True)
+  filepath=models.CharField(max_length=2048,null=True,blank=True)
+  isNIC=models.BooleanField(default=True)
+  remarks=models.TextField(blank=True,null=True)
+  class Meta:
+    db_table = 'location'
+  def __str__(self):
+    return self.name
+
+class Info(models.Model):
+  name=models.CharField(max_length=256)
+  slug=models.SlugField(blank=True) 
+  location=models.ForeignKey('Location',on_delete=models.CASCADE)
+  finyear=models.CharField(max_length=2,null=True,blank=True)
+  value=models.DecimalField(max_digits=10,decimal_places=4,null=True,blank=True)
+  textValue=models.CharField(max_length=2048,null=True,blank=True)
+  class Meta:
+    db_table = 'info'
+  def __str__(self):
+    if self.finyear is not None:
+      return "%s-%s-%s-%s" % (self.name,self.location,self.finyear,str(self.value))
+    else:
+      return "%s-%s-%s" % (self.name,self.location,str(self.value))
+  
 class State(models.Model):
   '''
   This is Model for the States. States are identified with unique code, which is based on code on Nrega Website. Additionally each NIC Nrega state has a different server, which is identified with crawlIP. 
@@ -160,6 +196,7 @@ class GenericReport(models.Model):
       return str(self.id)
 #The below Model is used to store block and panchayat level reports
 class Report(models.Model):
+  location=models.ForeignKey('Location',on_delete=models.CASCADE,null=True,blank=True)
   district=models.ForeignKey('District',on_delete=models.CASCADE,null=True,blank=True)
   block=models.ForeignKey('Block',on_delete=models.CASCADE,null=True,blank=True)
   panchayat=models.ForeignKey('Panchayat',on_delete=models.CASCADE,null=True,blank=True)
@@ -170,10 +207,12 @@ class Report(models.Model):
   created=models.DateTimeField(auto_now_add=True)
   modified=models.DateTimeField(auto_now=True)
   class Meta:
-    unique_together = ('district','block', 'panchayat','reportType','finyear')  
+    unique_together = ('location','district','block', 'panchayat','reportType','finyear')  
     db_table = 'report'
   def __str__(self):
-    if self.district is not None:
+    if self.location is not None:
+      return self.location.code+"_"+self.location.name+"-"+self.reportType
+    elif self.district is not None:
       return self.district.name+"-"+self.reportType
     elif self.block is not None:
       return self.block.name+"-"+self.reportType
@@ -187,6 +226,7 @@ class CrawlState(models.Model):
   sequence=models.PositiveSmallIntegerField(default=0)
   minhour=models.PositiveSmallIntegerField(default=6)
   maxhour=models.PositiveSmallIntegerField(default=21)
+  runChildLevel=models.BooleanField(default=True)
   isBlockLevel=models.BooleanField(default=False)
   isDistrictLevel=models.BooleanField(default=False)
   needFullBlockData=models.BooleanField(default=False)
@@ -1055,7 +1095,9 @@ def crawlRequest_post_save_receiver(sender,instance,*args,**kwargs):
     instance.save() 
      
 def report_post_save_receiver(sender,instance,*args,**kwargs):
-  if instance.panchayat is not None:
+  if instance.location is not None:
+    code="%s_%s_%s" % (instance.location.code,instance.finyear,instance.reportType)
+  elif instance.panchayat is not None:
     code="%s_%s_%s" % (instance.panchayat.code,instance.finyear,instance.reportType)
   elif instance.block is not None:
     code="%s_%s_%s" % (instance.block.code,instance.finyear,instance.reportType)
@@ -1075,11 +1117,13 @@ post_save.connect(crawlRequest_post_save_receiver,sender=CrawlRequest)
 post_save.connect(rejectedPayment_post_save_receiver,sender=RejectedPayment)
 post_save.connect(wagelist_post_save_receiver,sender=Wagelist)
 post_save.connect(fto_post_save_receiver,sender=FTO)
+post_save.connect(location_post_save_receiver,sender=Location)
 post_save.connect(location_post_save_receiver,sender=State)
 post_save.connect(location_post_save_receiver,sender=District)
 post_save.connect(location_post_save_receiver,sender=Block)
 post_save.connect(location_post_save_receiver,sender=Panchayat)
 post_save.connect(village_post_save_receiver,sender=Village)
 post_save.connect(location_post_save_receiver,sender=LibtechTag)
+post_save.connect(location_post_save_receiver,sender=Info)
 post_save.connect(panchayatCrawlInfo_post_save_receiver,sender=PanchayatCrawlInfo)
 

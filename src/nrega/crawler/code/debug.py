@@ -31,7 +31,7 @@ from django.db.models import F,Q,Sum,Count
 from django.db import models
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", djangoSettings)
 django.setup()
-from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Village,Worker,JobcardStat,Wagelist,WagelistTransaction,DPTransaction,FTO,Report,DemandWorkDetail,MISReportURL,PanchayatStat,RejectedPayment,FTOTransaction,WorkDetail,CrawlState,CrawlRequest,BlockStat
+from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Village,Worker,JobcardStat,Wagelist,WagelistTransaction,DPTransaction,FTO,Report,DemandWorkDetail,MISReportURL,PanchayatStat,RejectedPayment,FTOTransaction,WorkDetail,CrawlState,CrawlRequest,BlockStat,Location
 from crawlerFunctions import crawlerMain
 #from nregaDownload import crawlerMain,PanchayatCrawler,computePanchayatStat,downloadMuster,downloadWagelist,createCodeObjDict,createDetailWorkPaymentReport,telanganaJobcardDownload,telanganaJobcardProcess,createWorkPaymentReportAP,processRejectedPayment,downloadRejectedPayment,processWagelist,processMuster,downloadMISDPReport,processMISDPReport,downloadJobcardStat,processJobcardStat,jobcardRegister,objectDownloadMain,downloadMusterNew,processWorkDemand,downloadWorkDemand,downloadJobcardStat,fetchOldMuster,objectProcessMain,computeJobcardStat,downloadJobcard,processJobcard,validateAndSave,getReportHTML,createWorkPaymentJSK,validateNICReport,updateObjectDownload,downloadWagelist,processWagelist,crawlFTORejectedPayment,processBlockRejectedPayment,matchTransactions,getFTOListURLs
 from crawlerFunctions import processWagelist,createCodeObjDict,LocationObject,CrawlerObject
@@ -79,8 +79,10 @@ def main():
     finyear=args['finyear']
     locationCode=args['locationCode']
     cq=CrawlRequest.objects.filter(id=cqID).first()
-    cobj=CrawlerObject(cq.id)
-    pobj=LocationObject(cobj,code=locationCode)
+    if cqID is not None:
+      cobj=CrawlerObject(cq.id)
+#    pobj=LocationObject(locationCode)
+    pobj=Location.objects.filter(code=locationCode).first()
     #createCodeObjDict(logger,pobj)
     if modelName is not None:
       if funcName == "dumpDataCSV":

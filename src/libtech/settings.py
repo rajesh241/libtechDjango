@@ -27,7 +27,7 @@ SECRET_KEY = '==q56_!_+fc74@je^%4%4@u8@(@&_f^%-7vm8-#pfpcoz#_b4r'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["b.libtech.info"]
+ALLOWED_HOSTS = ["172.104.182.49","b.libtech.in","n.libtech.info"]
 
 
 # Application definition
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django_filters',
     'accounts',
     'nrega',
+    'django-altair',
 ]
 
 
@@ -62,7 +63,7 @@ ROOT_URLCONF = 'libtech.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR,'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

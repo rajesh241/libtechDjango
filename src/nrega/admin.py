@@ -19,7 +19,7 @@ class infoModelAdmin(admin.ModelAdmin):
   search_fields=["location__code","name","location__name"]
   readonly_fields=["location"]
 class locationModelAdmin(admin.ModelAdmin):
-  list_display = ["name","stateShortCode","code","crawlIP"]
+  list_display = ["name","stateShortCode","code","crawlIP","priority"]
   list_filter = ["locationType"]
   search_fields=["code"]
   readonly_fields = ["parentLocation"]
@@ -91,7 +91,7 @@ class panchayatStatModelAdmin(admin.ModelAdmin):
 class crawlRequestModelAdmin(admin.ModelAdmin):
   actions=[resetAttemptCount,setInProgress,resetInProgress]
   list_display = ["id","__str__","crawlState","inProgress","processName","priority","attemptCount","modified"]
-  readonly_fields=["panchayat","block","progress"]
+  readonly_fields=["panchayat","block","progress","location"]
   list_filter=["source","inProgress","isComplete","sequenceType","crawlState__name","attemptCount","panchayat__block__district__state__name"]
   search_fields=["panchayat__code"]
 class crawlStateModelAdmin(admin.ModelAdmin):

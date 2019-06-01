@@ -2,6 +2,7 @@ import codecs
 from contextlib import closing
 import requests
 import xlrd
+import decimal
 import collections
 import traceback
 import logging
@@ -36,7 +37,7 @@ django.setup()
 from nrega import models as nregamodels
 from nrega.crawler.commons.nregaFunctions import getCurrentFinYear,stripTableAttributes,getCenterAlignedHeading,htmlWrapperLocal,getFullFinYear,correctDateFormat,table2csv,array2HTMLTable,getDateObj,stripTableAttributesPreserveLinks,getFinYear
 from nrega.crawler.commons.nregaSettings import statsURL,telanganaStateCode,crawlerTimeThreshold,delayPaymentThreshold,crawlerErrorTimeThreshold
-from nrega.crawler.code.commons import saveReport,savePanchayatReport,uploadReportAmazon,getjcNumber,isReportUpdated,getReportHTML,validateAndSave,validateNICReport,csv_from_excel
+from nrega.crawler.code.commons import saveReport,savePanchayatReport,uploadReportAmazon,getjcNumber,isReportUpdated,getReportHTML,validateAndSave,validateNICReport,csv_from_excel,calculatePercentage
 from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Jobcard,PanchayatCrawlInfo,Worker,PanchayatStat,Village,Wagelist,FTO,WagelistTransaction,JobcardStat,DPTransaction,FTOTransaction,APWorkPayment,Report,WorkerStat,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,CrawlRequest,CrawlState,PaymentTransaction,WorkPayment,BlockStat,Location,Info
 from nrega.crawler.code.delayURLs import delayURLs
 
@@ -69,7 +70,9 @@ class CrawlerObject:
     self.iterateFinYear=cq.crawlState.iterateFinYear
     self.attemptCount=cq.attemptCount
     self.remarks=''
-    if cq.panchayat is not None:
+    if cq.location is not None:
+      self.locationCode=cq.location.code
+    elif cq.panchayat is not None:
       self.locationCode=cq.panchayat.code
     elif cq.block is not None:
       self.locationCode=cq.block.code
@@ -213,8 +216,9 @@ def crawlLocation(logger,cobj,lobj,downloadStage=None):
     pobj=Location.objects.filter(code=code).first()
     for finyear in finyearArray:
       logger.info(f'Crawling for { pobj.displayName } for finyear { finyear } downloadStage { downloadStage }')
-
-      if (downloadStage == "ddInit"):
+      if (downloadStage == "pensionInit"):
+        error=downloadPension(logger,pobj)
+      elif (downloadStage == "ddInit"):
         error=getBlockStat(logger,pobj,finyear)
         if error is not None:
           return error
@@ -347,187 +351,6 @@ def crawlLocation(logger,cobj,lobj,downloadStage=None):
     cq.save() 
   return error
 
-
-  
-def crawlNICPanchayat(logger,cobj,lobj,downloadStage=None):
-  error=None
-  accuracy=None
-  nextSequence=cobj.sequence+1
-  nextCrawlState=CrawlState.objects.filter(sequence=nextSequence).first()
-    
-  if downloadStage is None:
-    downloadStage=cobj.downloadStage
-  if lobj.locationType == "block":
-    logger.info("Running Crawl for Block %s-%s-%s for stage %s" % (str(lobj.cobj.id),lobj.blockCode,lobj.blockName,downloadStage))
-  elif lobj.locationType == "panchayat":
-    logger.info("Running Crawl for Panchayat %s-%s-%s for stage %s" % (str(lobj.cobj.id),lobj.panchayatCode,lobj.panchayatName,downloadStage))
-  
-  finyearArray=[]
-  if cobj.iterateFinYear == False:
-    finyearArray=[None]
-  else:
-    for finyear in range(int(cobj.startFinYear),int(cobj.endFinYear)+1):
-      finyearArray.append(str(finyear))
-   
-  locationCodeArray=[]
-  if cobj.isDistrictLevel == True:
-    locationCodeArray.append(lobj.districtCode)
-  elif cobj.isBlockLevel == True:
-    locationCodeArray.append(lobj.blockCode)
-  elif ((cobj.needFullBlockData == False) and (lobj.locationType == "panchayat")):
-    locationCodeArray.append(lobj.panchayatCode)
-  else:
-    if (lobj.locationType == 'district'):
-      myBlocks=Block.objects.filter(district__code=lobj.districtCode).order_by("-code")
-      for eachBlock in myBlocks:
-        locationCodeArray.append(eachBlock.code)
-    else:
-      myPanchayats=Panchayat.objects.filter(block__code=lobj.blockCode).order_by("-code")
-      for eachPanchayat in myPanchayats:
-        locationCodeArray.append(eachPanchayat.code)
-  
-  logger.info(finyearArray)
-  logger.info(f'Location Code Array { locationCodeArray }')
-
-  for code in locationCodeArray:
-    logger.info(code)
-    pobj=LocationObject(code)
-    createCodeObjDict(logger,pobj)
-    for finyear in finyearArray:
-      logger.info(f'Crawling for { pobj.displayName } for finyear { finyear } downloadStage { downloadStage }')
-
-      if (downloadStage == "ddInit"):
-        error=getBlockStat(logger,pobj,finyear)
-        if error is not None:
-          return error
-      elif (downloadStage == "ddGlance"):
-        error=getGlance(logger,pobj)
-        if error is not None:
-          return error
-
-      elif (downloadStage == "init"):
-        try:
-          PanchayatStat.objects.create(finyear=finyear,panchayat=pobj.panchayat)
-        except:
-          s=f'Panchayat Stat already exists'
-        error,totalEmploymentProvided=downloadPanchayatStat(logger,pobj,finyear)
-        if error is not None:
-          return error 
-        if int(totalEmploymentProvided) > 0:
-          error,isZeroMusters=crawlMusters(logger,pobj,finyear)
-          if error is not None:
-            return error
-          error=crawlWagelists(logger,pobj,finyear)
-          if error is not None:
-            return error
-
-
-      elif (downloadStage == "jobcardRegister"):
-        error=jobcardRegister(logger,pobj) 
-        if error is not None:
-          return error
-
-      elif (downloadStage == "telanganaJobcardRegister"):
-        error=jobcardRegisterTelangana(logger,pobj) 
-        if error is not None:
-          return error
-
-
-      elif (downloadStage == "crawlFTO"):
-        error=crawlFTORejectedPayment(logger,pobj,finyear) 
-        if error is not None:
-          return error
-
-      elif (downloadStage =="downloadWagelists"):
-        modelName="Wagelist"
-        error,downloadAccuracy=objectDownloadMain(logger,pobj,modelName,finyear)
-        if error is not None:
-          return error
-        objectProcessMain(logger,pobj,modelName,finyear)
-
-      elif (downloadStage =="downloadProcessFTO"):
-        modelName="FTO"
-        error,downloadAccuracy=objectDownloadMain(logger,pobj,modelName,finyear)
-        if error is not None:
-          return error
-        objectProcessMain(logger,pobj,modelName,finyear)
-
-      elif ( (downloadStage =="downloadJobcards") or (downloadStage=="telanganaDownloadJobcards")):
-        modelName="Jobcard"
-        error,downloadAccuracy=objectDownloadMain(logger,pobj,modelName,finyear)
-        if error is not None:
-          return error
-        objectProcessMain(logger,pobj,modelName,finyear)
-      
-      elif (downloadStage == "telanganaDownloadMusters"):
-        error=telanganaMusterDownload(logger,pobj,finyear)
-        if error is not None:
-          return error
-       #error=telanganaMusterProcess(logger,pobj,finyear)
-       #if error is not None:
-       #  return error
-       
-      elif (downloadStage =="downloadMusters"):
-        modelName="Muster"
-        error,downloadAccuracy=objectDownloadMain(logger,pobj,modelName,finyear)
-        if error is not None:
-          return error
-        objectProcessMain(logger,pobj,modelName,finyear)
-
-      elif (downloadStage =="downloadRejectedPayment"):
-        modelName="RejectedPayment"
-        error,downloadAccuracy=objectDownloadMain(logger,pobj,modelName,finyear)
-        if error is not None:
-          return error
-        objectProcessMain(logger,pobj,modelName,finyear)
-
-      elif (downloadStage =="DPDemandJobcardStat"):
-        error=downloadMISDPReport(logger,pobj,finyear)
-        if error is not None:
-          return error
-        processMISDPReport(logger,pobj,finyear)
-        error=downloadWorkDemand(logger,pobj,finyear)
-        if error is not None:
-          return error
-        processWorkDemand(logger,pobj,finyear)
-        error=downloadJobcardStat(logger,pobj,finyear)
-        if error is not None:
-          return error
-        processJobcardStat(logger,pobj,finyear)
-
-      elif (downloadStage =="matchTransactions"):
-        matchTransactions(logger,pobj,finyear)
-        
-      elif (downloadStage =="generateReports"):
-        curAccuracy=computePanchayatStat(logger,pobj,str(finyear))
-        createJobcardStatReport(logger,pobj,finyear)
-        createDetailWorkPaymentReport(logger,pobj,finyear)
-        if accuracy is None:
-          accuracy=curAccuracy
-        elif curAccuracy <= accuracy:
-          accuracy=curAccuracy
-
-      elif (downloadStage =="telanganaGenerateReports"):
-        createDetailWorkPaymentReportAP(logger,pobj,finyear)
-
-      elif (downloadStage =="dumpDataCSV"):
-        dumpDataCSV(logger,pobj,finyear=finyear,modelName="Worker")
-        dumpDataCSV(logger,pobj,finyear=finyear,modelName="WagelistTransaction")
-        dumpDataCSV(logger,pobj,finyear=finyear,modelName="FTOTransaction")
-        dumpDataCSV(logger,pobj,finyear=finyear,modelName="MusterTransaction")
-
-  if accuracy is not None:
-    cq=CrawlRequest.objects.filter(id=cobj.id).first()
-    cq.accuracy=accuracy
-    cq.save() 
-
-  if nextCrawlState is not None:
-    cq=CrawlRequest.objects.filter(id=cobj.id).first()
-    cq.crawlState=nextCrawlState
-    if ( (nextCrawlState.name == "ddComplete") or (nextCrawlState.name == "complete") or (nextCrawlState.name == "telanganaComplete")):
-      cq.isComplete=True
-    cq.save() 
-  return error
 
 def getPanchayatActiveStatus(logger,pobj,finyear):
   ps=PanchayatStat.objects.filter(panchayat=pobj.panchayat,finyear=finyear).first()
@@ -535,6 +358,7 @@ def getPanchayatActiveStatus(logger,pobj,finyear):
   return isActive
 
 def processGlance(logger,pobj):
+  logger.info("Process for location %s-%s " % (pobj.code,pobj.displayName))
   reportType="nicGlanceStats"
   finyear=None
   if hasattr(pobj, 'panchayat'):
@@ -554,11 +378,11 @@ def processGlance(logger,pobj):
         rowHeader=cols[0].text.lstrip().rstrip()
         if ("II" in rowHeader) and ("Progress" in rowHeader):
           basedOnFinYear=True
-          logger.info(rowHeader)
+          #logger.info(rowHeader)
           d=[]
           for col in cols:
             finyearString=col.text.replace("FY","").lstrip().rstrip()
-            logger.info(finyearString)
+            #logger.info(finyearString)
             finyear=finyearString[-2:]
             d.append(finyear)
         else:
@@ -568,21 +392,123 @@ def processGlance(logger,pobj):
               finyear=None
             else:
               finyear=d[i]
-            logger.info(finyear)
+            #logger.info(finyear)
             value=cols[i].text.lstrip().rstrip().replace(",","")
-            if value != "":
+            if ( (value != "") and (value.lower() != 'nan')):
+          #  if value != "":
               myStat=Info.objects.filter(name=rowHeader,finyear=finyear,location=pobj).first()
               if myStat is None:
                 myStat=Info.objects.create(name=rowHeader,finyear=finyear,location=pobj)
               try:
-                myStat.value=float(value)
+                b=decimal.Decimal(value)
+                myStat.value=b
               except:
                 a="is a string"
               myStat.textValue=value
               myStat.save()
 
-        
-        
+def updateViewStateValidation(logger,myhtml,d):
+  htmlsoup=BeautifulSoup(myhtml,"lxml")
+  try:
+    validation = htmlsoup.find(id='__EVENTVALIDATION').get('value')
+  except:
+    validation=''
+  try:
+    viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
+  except:
+    viewState=''
+  d['__VIEWSTATE']=viewState,
+  d['__EVENTVALIDATION']=validation,
+  return d
+  
+def downloadGlance(logger,pobj):
+  logger.info("I am in download Glance")
+  reportType="nicGlanceStats"
+  locationType=pobj.locationType
+  reportName="NIC At a Glance Stats"
+  reportIdentifier="Financial Progress"
+  url="http://mnregaweb4.nic.in/netnrega/all_lvl_details_dashboard_new.aspx"
+  urlPrefix="http://mnregaweb4.nic.in/netnrega/"
+  headers = {
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Encoding': 'gzip, deflate',
+  'Accept-Language': 'en-GB,en;q=0.5',
+  'Connection': 'keep-alive',
+  'Host': 'mnregaweb4.nic.in',
+  'Referer': url,
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:45.0) Gecko/20100101 Firefox/45.0',
+  'Content-Type': 'application/x-www-form-urlencoded',
+  }
+  logger.info(pobj.districtCode)
+  data = {
+        '__EVENTTARGET': '',
+        '__EVENTARGUMENT': '',
+        '__LASTFOCUS': '',
+        '__VIEWSTATEENCRYPTED': '',
+      #  'ddl_state': pobj.stateCode,
+      #  'ddl_dist' : pobj.districtCode,
+    #   'ddl_blk' : blockCode,
+    #   'ddl_pan' : panchayatCode,
+   #     'btproceed' : 'View Detail'
+      }
+
+  r=requests.get(url)
+  myhtml=None
+  isComplete=False
+  if r.status_code == 200:
+    myhtml=r.content
+    cookies=r.cookies
+    data['ddl_state']=pobj.stateCode
+    data=updateViewStateValidation(logger,r.content,data)
+    response = requests.post(url,headers=headers, data=data,cookies=cookies)
+    logger.info(data)
+    if response.status_code==200:
+      if locationType == "state":
+        isComplete=True
+      else:
+        data['ddl_dist']=pobj.districtCode
+        data=updateViewStateValidation(logger,response.content,data)
+        logger.info(data)
+        response = requests.post(url,headers=headers, data=data,cookies=cookies)
+        if response.status_code == 200:
+          if locationType == "district":
+            isComplete=True
+          else:
+            data['ddl_blk']=pobj.blockCode
+            data=updateViewStateValidation(logger,response.content,data)
+            logger.info(data)
+            response = requests.post(url,headers=headers, data=data,cookies=cookies)
+            if response.status_code == 200:
+              if locationType == "block":
+                isComplete=True
+              else:
+                data['ddl_pan']=pobj.panchayatCode
+                data=updateViewStateValidation(logger,response.content,data)
+                logger.info(data)
+                response = requests.post(url,headers=headers, data=data,cookies=cookies)
+                if response.status_code == 200:
+                  isComplete=True
+
+  myhtml=None
+  if isComplete==True:
+    data=updateViewStateValidation(logger,response.content,data)
+    data['btproceed']='View Detail'
+    response = requests.post(url,headers=headers, data=data,cookies=cookies)
+    if response.status_code==200:
+      myhtml=response.content
+      with open("/tmp/a.html","wb") as f:
+        f.write(myhtml)
+      htmlsoup=BeautifulSoup(myhtml,"lxml")
+      myiFrame=htmlsoup.find("iframe")
+      if myiFrame is not None:
+        statsURL=urlPrefix+myiFrame['src']
+        logger.info(statsURL)
+        r=requests.get(statsURL)
+        if r.status_code == 200:
+          error=validateAndSave(logger,pobj,r.content,reportName,reportType,jobcardPrefix=reportIdentifier)
+          processGlance(logger,pobj)
+  return myhtml
+    
             
 def getGlance(logger,pobj):
   reportType="nicGlanceStats"
@@ -713,6 +639,7 @@ def getGlance(logger,pobj):
                   r=requests.get(statsURL)
                   if r.status_code == 200:
                     error=validateAndSave(logger,lobj,r.content,reportName,reportType,jobcardPrefix=reportIdentifier)
+                    processGlance(logger,lobj)
                    #if locationCodeString == "ALL":
                    #  error=validateAndSave(logger,pobj,r.content,reportName,reportType,locationType="block",jobcardPrefix=reportIdentifier)
                    #else:
@@ -1310,6 +1237,209 @@ def crawlFTORejectedPayment(logger,pobj,finyear):
     outhtml+="</table></body></html>"
     error=validateAndSave(logger,pobj,outhtml,reportName,reportType,finyear=finyear,locationType="block",jobcardPrefix="Financial Institution",validate=False)
 
+def processPension(logger,pobj):
+  f = BytesIO()
+  f.write(u'\ufeff'.encode('utf8'))
+  w = csv.writer(f, encoding='utf-8-sig',delimiter=',',
+                lineterminator='\r\n',
+                quotechar = '"'
+                )
+####This is expected to be run at block Level
+  reportType="PensionAJJPY"
+  reports=Report.objects.filter(location__parentLocation__parentLocation__code = pobj.code,location__locationType = 'panchayat',reportType=reportType)
+  locationLabel=["state","district","block","panchayat"]
+  pensionLabel=["srno","sanctionOrderNo","applicantName","fatherHusbandName","age/gender","scheme","mobileNo","ifscCode","disbursementMode","PFMSRegisterd"]
+  w.writerow(locationLabel+pensionLabel)
+  for eachReport in reports:
+    url=eachReport.reportURL
+    logger.info(url)
+    r=requests.get(url)
+    if r.status_code == 200:
+      myhtml=r.content
+      logger.info("found the content")
+      mysoup=BeautifulSoup(myhtml,"lxml")
+      table=mysoup.find("table",id="myTable")
+      locationArray=[eachReport.location.parentLocation.parentLocation.parentLocation.name,eachReport.location.parentLocation.parentLocation.name,eachReport.location.parentLocation.name,eachReport.location.name]
+      if table is not None:
+        rows=table.findAll('tr')
+        for row in rows:
+          pensionArray=[]
+          cols=row.findAll('td')
+          if len(cols) > 0:
+            logger.info(cols[0].text.lstrip().rstrip())
+            if cols[0].text.lstrip().rstrip().isdigit():
+              for col in cols:
+                pensionArray.append(col.text.lstrip().rstrip())
+              a=locationArray+pensionArray
+              w.writerow(a)
+  f.seek(0)
+  outcsv=f.getvalue()
+  saveReport(logger,pobj,None,"pensionCSV",outcsv,contentType="text/csv")
+
+def downloadPension(logger,pobj):
+  reportIdentifier="Applicant"
+  reportName="Pension for AJJPY"
+  reportType="PensionAJJPY"
+  stateCode=pobj.stateCode
+  schemeName='AJJPY'
+  districtCode=pobj.code
+  districtName=pobj.name 
+  url="http://www.nsap.nic.in/statedashboard.do?method=intialize"
+  logger.info(url)
+  r=requests.get(url)
+  if r.status_code == 200:
+    cookies=r.cookies
+    logger.info(cookies)
+    url2="http://www.nsap.nic.in/statedashboard.do?method=showDashboarbPage&stateCode=%s" % stateCode
+  
+    data = {
+        'stateCode': stateCode,
+        'schemeAccToState': schemeName
+     }
+    response = requests.post(url2, cookies=cookies, data=data) 
+    if response.status_code == 200:
+       url3="http://www.nsap.nic.in/statedashboard.do?method=showSubdistrictDrillReport&districtcode=%s&districtname=%s" % (districtCode,districtName.upper())
+       r=requests.get(url3,cookies=cookies)
+       if r.status_code == 200:
+         districtHTML=r.content
+         districtSoup=BeautifulSoup(districtHTML,"lxml")
+         links=districtSoup.findAll("a")
+         for eachLink in links:
+           if "statedashboard.do?method=showSubdistrictDrillReport" in eachLink['href']:
+             blockLink="http://www.nsap.nic.in/"+eachLink['href']
+             logger.info(blockLink)
+             r=requests.get(blockLink,cookies=cookies)
+             if r.status_code == 200:
+               blockHTML=r.content
+               blockSoup=BeautifulSoup(blockHTML,"lxml")
+               panchayatLinks=blockSoup.findAll("a")
+               for eachPanchayatLink in panchayatLinks:
+                 logger.info(eachPanchayatLink)
+                 if "grampanchayatcode=" in eachPanchayatLink['href']:
+                   panchayatLink="http://www.nsap.nic.in/"+eachPanchayatLink['href']
+                   try:
+                     panchayatCode=re.search(r'grampanchayatcode=(.*?)&',panchayatLink).group(1)
+                   except:
+                     panchayatCode=None
+                   logger.info("%s-%s" % (panchayatCode,panchayatLink))
+                   r=requests.get(panchayatLink,cookies=cookies)
+                   time.sleep(5)
+                   r=requests.get(panchayatLink,cookies=cookies)
+                   if r.status_code == 200:
+                     myhtml=r.content
+                     logger.info("writing pension.html")
+                     lobj=Location.objects.filter(code=panchayatCode).first()
+                     if lobj is not None:
+                       error=validateAndSave(logger,lobj,myhtml,reportName,reportType,jobcardPrefix=reportIdentifier)
+
+def downloadFTOStatTable(logger,bankurl,lobj,finyear):
+  reportType="ftoStats"
+  reportName="FTO Statistics"
+  tableIdentifier="First Signatory"
+  r=requests.get(bankurl)
+  logger.info(bankurl)
+  if r.status_code == 200:
+    cookies=r.cookies
+    myhtml=r.content
+    error,bankTable=validateNICReport(logger,lobj,myhtml,jobcardPrefix=tableIdentifier)
+    htmlsoup=BeautifulSoup(myhtml,"lxml")
+    try:
+      validation = htmlsoup.find(id='__EVENTVALIDATION').get('value',None)
+    except:
+      validation=''
+    viewState = htmlsoup.find(id='__VIEWSTATE').get('value')
+    data = {
+       '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$RBtnLstIsEfms$2',
+       '__EVENTARGUMENT': '',
+       '__LASTFOCUS': '',
+       '__VIEWSTATE': viewState,
+       '__VIEWSTATEENCRYPTED': '',
+       '__EVENTVALIDATION': validation,
+       'ctl00$ContentPlaceHolder1$RBtnLst': 'W',
+       'ctl00$ContentPlaceHolder1$RBtnLstIsEfms': 'C',
+       'ctl00$ContentPlaceHolder1$HiddenField1': ''
+    }
+  
+    response = requests.post(bankurl,cookies=cookies, data=data)
+    if response.status_code==200:
+      myhtml=response.content
+      error,coBankTable=validateNICReport(logger,lobj,myhtml,jobcardPrefix=tableIdentifier)
+    else:
+      error="Unable to download cobank table"
+  
+    data = {
+       '__EVENTTARGET': 'ctl00$ContentPlaceHolder1$RBtnLstIsEfms$2',
+       '__EVENTARGUMENT': '',
+       '__LASTFOCUS': '',
+       '__VIEWSTATE': viewState,
+       '__VIEWSTATEENCRYPTED': '',
+       '__EVENTVALIDATION': validation,
+       'ctl00$ContentPlaceHolder1$RBtnLst': 'W',
+       'ctl00$ContentPlaceHolder1$RBtnLstIsEfms': 'P',
+       'ctl00$ContentPlaceHolder1$HiddenField1': ''
+    }
+  
+    response = requests.post(bankurl,cookies=cookies, data=data)
+    if response.status_code==200:
+      myhtml=response.content
+      error,postTable=validateNICReport(logger,lobj,myhtml,jobcardPrefix=tableIdentifier)
+    else:
+      error="Unable to download post table"
+  
+  else:
+    error="unable to download district URL %s " % bankurl
+  baseURL="http://%s/netnrega/FTO/" % (lobj.crawlIP)
+  outhtml=''
+  outhtml+=getCenterAlignedHeading(lobj.displayName)
+  outhtml+=getCenterAlignedHeading("Financial Year: %s " % (getFullFinYear(finyear)))
+  if bankTable is not None:
+    outhtml+=getCenterAlignedHeading("Bank Table")
+    outhtml+=stripTableAttributesPreserveLinks(bankTable,"bankTable",baseURL)
+  if coBankTable is not None:
+    outhtml+=getCenterAlignedHeading("Cooperative Bank Table")
+    outhtml+=stripTableAttributesPreserveLinks(coBankTable,"coBankTable",baseURL)
+  if postTable is not None:
+    outhtml+=getCenterAlignedHeading("Post Office Table")
+    outhtml+=stripTableAttributesPreserveLinks(postTable,"postTable",baseURL)
+  outhtml=htmlWrapperLocal(title=reportName, head='<h1 aling="center">'+reportName+'</h1>', body=outhtml)
+  
+  saveReport(logger,lobj,finyear,reportType,outhtml)
+ 
+def getFTOStat(logger,lobj,finyear):
+  reportType="ftoStats"
+  reportName="FTO Statistics"
+  tableIdentifier="First Signatory"
+  fullFinYear=getFullFinYear(finyear)
+  mru=MISReportURL.objects.filter(state__code=lobj.stateCode,finyear=finyear).first()
+  urlPrefix="http://mnregaweb4.nic.in/netnrega/FTO/"
+  if mru is  None:
+    error="unable to find mru"
+  else:
+    bankTable=None
+    postTable=None
+    coBankTable=None
+    url=mru.ftoURL
+    bankurl=getFTOBankURL(logger,url,lobj)
+    if bankurl is not None:
+      downloadFTOStatTable(logger,bankurl,lobj,finyear)
+
+def getFTOBankURL(logger,url,lobj):
+  if lobj.locationType == 'state':
+    return url
+  elif lobj.locationType == 'district':
+    bankurl=None
+    if r.status_code==200:
+      s="district_code=%s" % (lobj.parentLocation.code)
+      logger.info(s)
+      myhtml=r.content
+      htmlsoup=BeautifulSoup(myhtml,"lxml")
+      a=htmlsoup.find("a", href=re.compile(s))
+      if a is not None:
+        bankurl="%s%s" % (urlPrefix,a['href'])
+        logger.info(bankurl)
+    return bankurl
+
+
 def getBlockStat(logger,pobj,finyear):
   reportType="ftoStats"
   reportName="FTO Statistics"
@@ -1410,10 +1540,45 @@ def getBlockStat(logger,pobj,finyear):
     saveReport(logger,pobj,finyear,reportType,outhtml)
     processBlockStat(logger,pobj,finyear)
   return error
+def processFTOStat(logger,pobj,finyear):
+  reportType="ftoStats"
+  error,myhtml=getReportHTML(logger,pobj,reportType,finyear,locationType='district')
+  logger.info("got the html")
+  #logger.info(error)
+  htmlsoup=BeautifulSoup(myhtml,"lxml")
+  p=makehash()
+  bankTable=htmlsoup.find("table",id="bankTable")
+  if bankTable is not None:
+    p=getFTOStatDict(logger,pobj,bankTable,p,paymentAgency="bank")  
+  coBankTable=htmlsoup.find("table",id="coBankTable")
+  if coBankTable is not None:
+    p=getFTOStatDataDict(logger,coBankTable,p,paymentAgency="coBank")  
+  postTable=htmlsoup.find("table",id="postTable")
+  if postTable is not None:
+    p=getFTOStatDataDict(logger,postTable,p,paymentAgency="post")  
+  for blockCode,bdict in p.items():
+    lobj=Location.objects.filter(code=blockCode).first()
+    if lobj is not None:
+      for paymentAgency,pdict in bdict.items():
+        for key,value in pdict.items():
+          if value != '':
+            attrName=paymentAgency+key
+            #logger.info(attrName)
+            myInfo=Info.objects.filter(location=lobj,finyear=finyear,name=attrName).first()
+            if myInfo is None:
+              myInfo=Info.objects.create(location=lobj,finyear=finyear,name=attrName)
+            try:
+              myInfo.value=float(value)
+            except:
+              a="not a value"
+            myInfo.textValue=value
+            myInfo.save()
+
+
 def processBlockStat(logger,pobj,finyear):
   reportType="ftoStats"
   error,myhtml=getReportHTML(logger,pobj,reportType,finyear,locationType='district')
-  logger.info(error)
+  #logger.info(error)
   htmlsoup=BeautifulSoup(myhtml,"lxml")
   p=makehash()
   bankTable=htmlsoup.find("table",id="bankTable")
@@ -1457,7 +1622,48 @@ def processBlockStat(logger,pobj,finyear):
  #        setattr(bs,attrName,value)
  #        #logger.info(attrName)
  #    bs.save()
-           
+def getFTOStatDict(logger,lobj,myTable,p,paymentAgency=None):
+  if lobj.locationType == 'state':
+    splitText="district_code="
+    locationCodeLength=4
+  else:
+    splitText="block_code="
+    locationCodeLength=7
+  rows=myTable.findAll('tr')
+  for row in rows:
+    cols=row.findAll('td')
+    locationCode=None
+    if len(cols) == 20:
+      if ((cols[1].text.lstrip().rstrip() == "Total" ) and (lobj.locationType == 'state')):
+        locationCode=lobj.code
+      locationLinkA=cols[3].find("a")
+      if locationLinkA is not None:
+        locationURL=locationLinkA['href']
+        logger.info(locationURL)
+        locationURLArray=locationURL.split(splitText)
+        if len(locationURLArray) == 2:
+          locationCode=locationURLArray[1][:locationCodeLength]
+          logger.info(locationCode)
+
+    if locationCode is not None:
+      rejectedURL=None
+      invalidURL=None
+      URLA=cols[17].find("a")
+      if URLA is not None:
+        invalidURL=URLA["href"]
+      rejectedURLA=cols[18].find("a")
+      if rejectedURLA is not None:
+        rejectedURL=rejectedURLA["href"]
+      p[locationCode][paymentAgency]['TotalTransactions']=cols[19].text.lstrip().rstrip()
+      p[locationCode][paymentAgency]['TotalRejected']=cols[18].text.lstrip().rstrip()
+      p[locationCode][paymentAgency]['RejectedPercentage']=calculatePercentage(cols[18].text.lstrip().rstrip(),cols[19].text.lstrip().rstrip(),defaultPercentage=0)
+      p[locationCode][paymentAgency]['TotalInvalid']=cols[17].text.lstrip().rstrip()
+      p[locationCode][paymentAgency]['InvalidPercentage']=calculatePercentage(cols[17].text.lstrip().rstrip(),cols[19].text.lstrip().rstrip(),defaultPercentage=0)
+      p[locationCode][paymentAgency]['TotalProcessed']=cols[16].text.lstrip().rstrip()
+      p[locationCode][paymentAgency]['RejectedURL']=rejectedURL
+      p[locationCode][paymentAgency]['InvalidURL']=invalidURL
+  return p
+       
 def getFTOStatDataDict(logger,myTable,p,paymentAgency=None):
   rows=myTable.findAll('tr')
   for row in rows:
@@ -1480,7 +1686,9 @@ def getFTOStatDataDict(logger,myTable,p,paymentAgency=None):
          # p[blockCode][paymentAgency]['blockURL'] = blockURL
           p[blockCode][paymentAgency]['TotalTransactions']=cols[19].text.lstrip().rstrip()
           p[blockCode][paymentAgency]['TotalRejected']=cols[18].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['RejectedPercentage']=calculatePercentage(cols[18].text.lstrip().rstrip(),cols[19].text.lstrip().rstrip(),defaultPercentage=0)
           p[blockCode][paymentAgency]['TotalInvalid']=cols[17].text.lstrip().rstrip()
+          p[blockCode][paymentAgency]['InvalidPercentage']=calculatePercentage(cols[17].text.lstrip().rstrip(),cols[19].text.lstrip().rstrip(),defaultPercentage=0)
           p[blockCode][paymentAgency]['TotalProcessed']=cols[16].text.lstrip().rstrip()
           p[blockCode][paymentAgency]['RejectedURL']=rejectedURL
           p[blockCode][paymentAgency]['InvalidURL']=invalidURL

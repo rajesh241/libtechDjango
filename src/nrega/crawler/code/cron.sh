@@ -1,11 +1,11 @@
 #!/bin/bash
 #First we will kill the process if it is older than 3 hours
-cd /home/crawler/repo/libtechDjango/venv/
+cd /home/$1/repo/venv/
 source bin/activate
-cmd="python /home/crawler/repo/libtechDjango/src/nrega/crawler/code/downloadData_sm.py -se -ti $1"
+cmd="python /home/$1/repo/libtechDjango/src/nrega/crawler/code/downloadData_sm.py -se -ti $2"
 #echo $cmd
 #$cmd
-sleep $1
+sleep $2
 myPID=$(pgrep -f "$cmd")
 
 echo $myPID
@@ -22,4 +22,4 @@ else
       kill -9 $myPID
   fi
 fi
-pgrep -f "$cmd" || $cmd &> /tmp/downloadSE_$1.log
+pgrep -f "$cmd" || $cmd &> /tmp/cron_$1_$2.log

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load django_altair %}
+
+{% load static %}
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm//vega@3.2"></script>
+<script src="https://cdn.jsdelivr.net/npm//vega-lite@2.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm//vega-embed@3.0"></script>
+
+<link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<link href="https://s3.ap-south-1.amazonaws.com/nrega-pds-2/static/test/a.css" rel="stylesheet" id="a">
+<script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script src="https://s3.ap-south-1.amazonaws.com/nrega-pds-2/static/test/a.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<div>
+     <div class="container">
+	<div class="row">
+		<div class="ui-widget">
+            <form  method="get">
+            <label>District: </label>
+            <select name="location" id="combobox">
+                <option></option>
+		{% for l in locations %}
+		    <option value={{ l.code }}>{{ l.displayName }}</option>
+	        {% endfor %}
+          </select>
+          <input type="submit" value="Submit">
+            </form>
+	    {% if q  %}
+	     <h1> Q Exists <h1>
+	  {% endif %}
+
+        </div>
+    </div>
+</div>
+
+</div>
+
+
+	{% if rejectedPercentageChart %}
+<div>
+	    <p> Rejected Percentage Chart</p>
+	        {% render_chart rejectedPercentageChart %}
+</div>
+	  {% endif %}
+          
+
+	{% if delayPaymentChart %}
+<div>
+	    <p> Delayed Payment Chart</p>
+	        {% render_chart delayPaymentChart %}
+</div>
+	  {% endif %}
+
+
+
+	{% if womenWorkForceChart %}
+          <div>
+	    <p> Percentage Women Work Force</p>
+	        {% render_chart womenWorkForceChart %}
+           </div>
+	  {% endif %}
+
+	{% if SCWorkerChart %}
+          <div>
+	    <p> Percentage SC WorkForce</p>
+	        {% render_chart SCWorkerChart %}
+           </div>
+	  {% endif %}
+
+
+	{% if STWorkerChart %}
+          <div>
+	    <p> Percentage ST Work Force</p>
+	        {% render_chart STWorkerChart %}
+           </div>
+	  {% endif %}
+
+	{% if avgEmploymentChart %}
+          <div>
+	    <p> Average Employment Chart</p>
+	        {% render_chart avgEmploymentChart %}
+           </div>
+	  {% endif %}
+{% endblock %}

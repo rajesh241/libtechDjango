@@ -22,6 +22,15 @@ from datetime import datetime, timedelta
 from nrega.crawler.commons.nregaFunctions import getCurrentFinYear,stripTableAttributes,getCenterAlignedHeading,htmlWrapperLocal,getFullFinYear,correctDateFormat,table2csv,array2HTMLTable,getDateObj,stripTableAttributesPreserveLinks,getFinYear
 from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Jobcard,PanchayatCrawlInfo,Worker,PanchayatStat,Report
 
+def calculatePercentage(num,den,defaultPercentage=100):
+  if den == 0:
+    return defaultPercentage
+  else:
+    try:
+      return int(int(num)*100/int(den))
+    except:
+      return defaultPercentage
+
 def csv_from_excel(excelFile,csvFile):
     wb = xlrd.open_workbook(excelFile)
     sh = wb.sheet_by_name('Documents')

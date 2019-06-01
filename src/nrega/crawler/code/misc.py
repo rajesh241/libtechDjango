@@ -1,4 +1,8 @@
 import os
+import csv
+import lxml
+from selenium import webdriver
+import lxml.html
 import urllib.request
 from bs4 import BeautifulSoup
 import re
@@ -8,16 +12,23 @@ import time
 import json
 import requests
 import boto3
+import pytesseract
+import urllib.request as urllib2
+import http.cookiejar as cookielib
+from io import BytesIO
+from transliterate.base import TranslitLanguagePack, registry
+from transliterate import translit
+from PIL import Image
 fileDir = os.path.dirname(os.path.realpath(__file__))
 rootDir=fileDir+"/../../../"
 sys.path.insert(0, rootDir)
 from config.defines import djangoSettings,logDir
 from nrega.crawler.commons.nregaSettings import startFinYear,panchayatCrawlThreshold,panchayatRetryThreshold,telanganaStateCode,panchayatAttemptRetryThreshold,apStateCode,crawlRetryThreshold,crawlProcessTimeThreshold,crawlerTimeThreshold
 #from crawlFunctions import crawlPanchayat,crawlPanchayatTelangana,libtechCrawler
-
+from nrega.crawler.commons.sn import driverInitialize, driverFinalize, displayInitialize, displayFinalize
 from nrega.crawler.commons.nregaFunctions import stripTableAttributes,htmlWrapperLocal,getCurrentFinYear,table2csv,getFullFinYear,loggerFetch,getDateObj,getCenterAlignedHeading,stripTableAttributesPreserveLinks
 from nrega import models  as nregamodels
-from nrega.models import Jobcard
+from nrega.models import Jobcard,Location,CrawlRequest
 from commons import savePanchayatReport,uploadReportAmazon,getjcNumber,isReportUpdated
 import django
 from django.core.wsgi import get_wsgi_application
@@ -30,6 +41,247 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", djangoSettings)
 django.setup()
 from nregaDownload import crawlerMain,PanchayatCrawler,computePanchayatStat,downloadMuster,downloadWagelist,createCodeObjDict,createDetailWorkPaymentReport,telanganaJobcardDownload,telanganaJobcardProcess,createWorkPaymentReportAP,processRejectedPayment,downloadRejectedPayment,processWagelist,processMuster,downloadMISDPReport,processMISDPReport,downloadJobcardStat,processJobcardStat,jobcardRegister,objectDownloadMain,downloadMusterNew,processWorkDemand,downloadWorkDemand,downloadJobcardStat,fetchOldMuster,objectProcessMain,computeJobcardStat,downloadJobcard,processJobcard,validateAndSave,getReportHTML,createWorkPaymentJSK,validateNICReport,updateObjectDownload,downloadWagelist,processWagelist,crawlFTORejectedPayment,processBlockRejectedPayment,matchTransactions,getFTOListURLs
 from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Village,Worker,JobcardStat,Wagelist,WagelistTransaction,DPTransaction,FTO,Report,DemandWorkDetail,MISReportURL,PanchayatStat,RejectedPayment,FTOTransaction,WorkDetail
+from nrega.crawler.code.languagePacks import hindiLanguagePack
+def load_captcha(logger,url):
+   ckj=cookielib.CookieJar()
+   browser = urllib2.build_opener(urllib2.HTTPCookieProcessor(ckj))
+   html = browser.open(url).read()
+   tree = lxml.html.fromstring(html)
+   img_data = tree.xpath('//img[@id="captcha"]')[0].get('src')
+
+   img_data = img_data.partition(',')[-1]
+   binary_img_data = img_data.decode('base64')
+   file_like = BytesIO(binary_img_data)
+   img = Image.open(file_like)
+   img.save("/tmp/a.jpg")
+   return
+
+def getCaptchaImage(logger,url):
+  driver = driverInitialize(timeout=3) # driverInitialize(path='/opt/firefox/', timeout=3)
+  driver.get(url)
+  with open('/tmp/filename.jpg', 'wb') as file:
+    file.write(driver.find_element_by_xpath('/html/body/div[2]/div[2]/div/form/table/tbody/tr[14]/td[1]/img').screenshot_as_png) 
+  driverFinalize(driver)
+  process_cleanup(logger)
+  return 'SUCCESS'
+def getRationList(logger,cookies,districtCode,blockCode,dealerCode,cardType):
+  filename="/tmp/bb.html"
+  timeout=10
+  headers = {
+        'Origin': 'https://aahar.jharkhand.gov.in',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.97 Safari/537.36 Vivaldi/1.94.1008.44',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'Cache-Control': 'max-age=0',
+        'Referer': 'https://aahar.jharkhand.gov.in/secc_cardholders/searchRation',
+        'Connection': 'keep-alive',
+    }
+  data = [
+            ('_method', 'POST'),
+            ('data[SeccCardholder][rgi_district_code]', districtCode),
+            ('data[SeccCardholder][rgi_block_code]', blockCode),
+            ('r1', 'dealer'),
+            ('data[SeccCardholder][rgi_village_code]', ''),
+            ('data[SeccCardholder][dealer_id]', dealerCode),
+            ('data[SeccCardholder][cardtype_id]', cardType),
+            ('data[SeccCardholder][rationcard_no]', ''),
+        ]
+
+  response = requests.post('https://aahar.jharkhand.gov.in/secc_cardholders/searchRationResults', headers=headers, cookies=cookies, data=data, timeout=timeout, verify=False)
+  if response.status_code == 200:
+    myhtml=response.content
+    logger.info("able to download list")
+    with open(filename,"wb") as f:
+      f.write(myhtml)
+
+
+def post_ration_req(logger, cookies=None, village_code=None, card_type=None, ration_number=None, dealer_code=None, block_code=None, district_code=None):
+    logger.info('Fetch the Ration List for Village[%s] Card Type[%s]' % (village_code, card_type))
+    district_code='359'
+    block_code='02635'
+    dealer_code='58da8c19-3960-44fd-ae46-4857c0a80129'
+    card_type='6'
+    timeout=10
+
+    filename = 'ration_list.html'
+    if ration_number:
+        filename = dirname + ration_number + '.html'   # dirname = ./ration/
+    if village_code:
+        filename = dirname + village_codes[village_code] + '_' + card_types[card_type] + '.html'     # dirname = ./ration/
+
+    if dealer_code:
+        filename="/tmp/aaaa.html"
+    logger.info(filename)
+
+    if os.path.exists(filename):
+        with open(filename, 'rb') as html_file:
+            logger.info('File already donwnloaded. Reading [%s]' % filename)
+            ration_list_html = html_file.read()
+    
+        return ration_list_html
+    logger.info('File not already downloaded. So fetching...')
+
+    if not cookies:        
+        url="https://aahar.jharkhand.gov.in/district_monthly_reports/"
+        try:
+            response = requests.post(url, timeout=timeout, verify=False)
+        except Exception as e:
+            logger.error('Caught Error[%s]' % e)
+            response = requests.post(url, timeout=timeout, verify=False)
+        cookies = response.cookies
+
+    headers = {
+        'Origin': 'https://aahar.jharkhand.gov.in',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.97 Safari/537.36 Vivaldi/1.94.1008.44',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'Cache-Control': 'max-age=0',
+        'Referer': 'https://aahar.jharkhand.gov.in/secc_cardholders/searchRation',
+        'Connection': 'keep-alive',
+    }
+
+    if village_code:
+        data = [
+            ('_method', 'POST'),
+            ('data[SeccCardholder][rgi_district_code]', district_code),
+            ('data[SeccCardholder][rgi_block_code]', block_code),
+            ('r1', 'panchayat'),
+            ('data[SeccCardholder][rgi_village_code]', village_code),
+            ('data[SeccCardholder][dealer_id]', ''),
+            ('data[SeccCardholder][cardtype_id]', card_type),
+        ]
+
+    if ration_number:
+        data.append(('data[SeccCardholder][rationcard_no]', ration_number))
+
+#  'data[SeccCardholder][captcha]': captcha_text,
+    # This and above are mutually exclusive
+    if dealer_code:
+        data = [
+            ('_method', 'POST'),
+            ('data[SeccCardholder][rgi_district_code]', district_code),
+            ('data[SeccCardholder][rgi_block_code]', block_code),
+            ('r1', 'dealer'),
+            ('data[SeccCardholder][rgi_village_code]', ''),
+            # ('data[SeccCardholder][dealer_id]', '4f51aa25-0e24-477f-985f-0f60c0a80102'),
+            ('data[SeccCardholder][dealer_id]', dealer_code),
+            ('data[SeccCardholder][cardtype_id]', card_type),
+            ('data[SeccCardholder][rationcard_no]', ''),
+            # ('data[SeccCardholder][captcha]', 'b8d79'),
+        ]
+
+    logger.info('Making request with Data [%s]' % data)
+
+    try:
+        response = requests.post('https://aahar.jharkhand.gov.in/secc_cardholders/searchRationResults', headers=headers, cookies=cookies, data=data, timeout=timeout, verify=False)
+    except Exception as e:
+        logger.error('Caught Error[%s]' % e)
+        try:
+            response = requests.post('https://aahar.jharkhand.gov.in/secc_cardholders/searchRationResults', headers=headers, cookies=cookies, data=data, timeout=timeout, verify=False)
+        except Exception as e:
+            logger.error('Repeat Caught Error[%s]' % e)
+
+    ration_list_html = response.content
+
+    with open(filename, 'wb') as html_file:
+        logger.info('Writing [%s]' % filename)
+        html_file.write(ration_list_html)
+
+    return ration_list_html
+
+def crawlPDSDistrictBlocks(logger):
+  url="https://aahar.jharkhand.gov.in/secc_cardholders/searchRationResults"
+  r=requests.get(url)
+  if r.status_code == 200:
+    myhtml=r.content
+    mysoup=BeautifulSoup(myhtml,"lxml")
+    districtSelect=mysoup.find("select",id="SeccCardholderRgiDistrictCode")
+    options=districtSelect.findAll('option')
+    for option in options:
+      districtName=option.text
+      districtCode=option['value']
+      if option['value'] != "":
+        logger.info("District Name %s Code %s " % (option.text,option['value']))
+        myLocation=Location.objects.filter(parentLocation__code='34',locationType='district',name=districtName).first()
+        if myLocation is not None:
+          logger.info("Found teh location %s" % myLocation.code)
+def pdsFetch(logger):
+  pdsBaseURL="https://aahar.jharkhand.gov.in/secc_cardholders/searchRationResults"
+#  getCaptchaImage(logger,pdsBaseURL)
+  r=requests.get(pdsBaseURL)
+  if r.status_code == 200:
+    cookies=r.cookies
+#    post_ration_req(logger,cookies=cookies)
+    districtCode='359'
+    blockCode='02635'
+    dealerCode='58da8c19-3960-44fd-ae46-4857c0a80129'
+    cardType='6'
+    getRationList(logger,cookies,districtCode,blockCode,dealerCode,cardType)
+    exit(0)
+    myhtml=r.content
+    mysoup=BeautifulSoup(myhtml,"lxml")
+    imgTag=mysoup.find("img",id="captcha")
+    logger.info(imgTag)
+    imgsrc=imgTag['src']
+    logger.info(imgsrc)
+    filename="/tmp/captcha.jpg"
+    imgsrc="https://aahar.jharkhand.gov.in/secc_cardholders/captcha_image"
+    response=requests.get(imgsrc)
+    with open(filename,"wb") as f:
+      f.write(response.content)
+    captcha_text=pytesseract.image_to_string(Image.open(filename))
+    logger.info(captcha_text)
+    headers = {
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Accept-Language': 'en-GB,en;q=0.5',
+      'Connection': 'keep-alive',
+      'Host': 'aahar.jharkhand.gov.in',
+      'Referer': 'https://aahar.jharkhand.gov.in/secc_cardholders/searchRation',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:45.0) Gecko/20100101 Firefox/45.0',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    }
+    data = {
+  'data[SeccCardholder][rgi_district_code]': '359'
+   }
+
+    response = requests.post('https://aahar.jharkhand.gov.in/secc_cardholders/getRgiBlock', headers=headers, cookies=cookies, data=data)
+    data = {
+  'data[SeccCardholder][rgi_block_code]': '02636'
+}
+
+    response = requests.post('https://aahar.jharkhand.gov.in/secc_cardholders/getRgiDealer', headers=headers, cookies=cookies, data=data)
+    response = requests.post('https://aahar.jharkhand.gov.in/secc_cardholders/getRgiVillages', headers=headers, cookies=cookies, data=data)
+    imgsrc="https://aahar.jharkhand.gov.in/secc_cardholders/captcha_image"
+    response=requests.get(imgsrc)
+    with open(filename,"wb") as f:
+      f.write(response.content)
+    captcha_text=pytesseract.image_to_string(Image.open(filename))
+    logger.info(captcha_text)
+     
+    data = {
+  '_method': 'POST',
+  'data[SeccCardholder][rgi_district_code]': '359',
+  'data[SeccCardholder][rgi_block_code]': '02636',
+  'r1': 'dealer',
+  'data[SeccCardholder][rgi_village_code]': '',
+  'data[SeccCardholder][dealer_id]': '570a3a2e-1e6c-4efc-8b30-425ac0a80129',
+  'data[SeccCardholder][cardtype_id]': '6',
+#  'data[SeccCardholder][captcha]': captcha_text,
+  'data[SeccCardholder][rationcard_no]': ''
+}
+    response1= requests.post('https://aahar.jharkhand.gov.in/secc_cardholders/searchRationResults', headers=headers, cookies=cookies, data=data)
+    if response1.status_code == 200:
+      myhtml=response1.content
+      logger.info("Have got the html")
+      with open("/tmp/base.html","wb") as f:
+        f.write(myhtml)    
 def argsFetch():
   '''
   Paser for the argument list that returns the args list
@@ -677,7 +929,116 @@ def main():
       CrawlQueue.objects.create(panchayat=eachPanchayat,priority=50000,startFinYear='18')
       logger.info(eachPanchayat.name)
 
+  if args['test1']:
+    crs=CrawlRequest.objects.filter(location__parentLocation='02')
+    for cr in crs:
+      cr.priority=0
+      logger.info(cr.id)
+      logger.info(cr.location.parentLocation)
+      cr.save()
+    exit(0)
+    registry.register(hindiLanguagePack)
+    b=[]
+        
+    with open('/tmp/latehar_pvtg_pds.csv') as csv_file:
+      csv_reader = csv.reader(csv_file, delimiter=',')
+      line_count = 0
+      for row in csv_reader:
+          maxCol=len(row)
+          if line_count == 0:
+            print(f'Column names are {", ".join(row)}')
+            line_count += 1
+            row.append("name")
+            row.append("fatherHusbandName")
+            b.append(row)
+          else:
+            hindiName=row[4]
+            englishName=translit(hindiName, 'hi', reversed=True)
+            logger.info("HindiName %s EnglishName %s " % (hindiName,englishName)) 
+            fatherHusbandName=row[5]
+            englisthFatherHusbandName=translit(fatherHusbandName, 'hi', reversed=True)
+            logger.info("HindiName %s EnglishName %s " % (hindiName,englishName)) 
+            row.append(englishName)
+            row.append(englisthFatherHusbandName)
+            b.append(row)
+    with open('/tmp/latehar_pvtg_pds1.csv', mode='w') as employee_file:
+      csvWriter = csv.writer(employee_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+      for a in b:
+        csvWriter.writerow(a)
+
   if args['test']:
+    lobjs=Location.objects.filter(locationType=="state")
+    for lobj in lobjs:
+      logger.info(lobj)
+      if lobj.locationType == 'district':
+        lobj.districtCode=lobj.code
+      elif lobj.locationType == 'block':
+        lobj.districtCode=lobj.parentLocation.code
+        lobj.blockCode=lobj.code
+      elif lobj.locationType == 'panchayat':
+        lobj.districtCode=lobj.parentLocation.parentLocation.code
+        lobj.blockCode=lobj.parentLocation.code
+        lobj.panchayatCode=lobj.code
+      lobj.save()
+    exit(0)
+    crawlPDSDistrictBlocks(logger)
+    exit(0)
+    pdsFetch(logger)
+    exit(0) 
+    myLocations=Location.objects.filter(locationType='district').order_by("-parentLocation__priority")
+    for lobj in myLocations:
+      CrawlRequest.objects.create(sequenceType='dd',location=lobj,startFinYear='17',endFinYear='19')
+    exit(0)
+    schemeName='AJJPY'
+    districtCode='3406'
+    districtName='latehar' 
+    url="http://www.nsap.nic.in/statedashboard.do?method=intialize"
+    logger.info(url)
+    r=requests.get(url)
+    if r.status_code == 200:
+      cookies=r.cookies
+      logger.info(cookies)
+      url2="http://www.nsap.nic.in/statedashboard.do?method=showDashboarbPage&stateCode=%s" % stateCode
+
+      data = {
+          'stateCode': stateCode,
+          'schemeAccToState': schemeName
+       }
+      response = requests.post(url2, cookies=cookies, data=data) 
+      if response.status_code == 200:
+         url3="http://www.nsap.nic.in/statedashboard.do?method=showSubdistrictDrillReport&districtcode=%s&districtname=%s" % (districtCode,districtName.upper())
+         r=requests.get(url3,cookies=cookies)
+         if r.status_code == 200:
+           districtHTML=r.content
+           districtSoup=BeautifulSoup(districtHTML,"lxml")
+           links=districtSoup.findAll("a")
+           for eachLink in links:
+             if "statedashboard.do?method=showSubdistrictDrillReport" in eachLink['href']:
+               blockLink="http://www.nsap.nic.in/"+eachLink['href']
+               logger.info(blockLink)
+               r=requests.get(blockLink,cookies=cookies)
+               if r.status_code == 200:
+                 blockHTML=r.content
+                 blockSoup=BeautifulSoup(blockHTML,"lxml")
+                 panchayatLinks=blockSoup.findAll("a")
+                 for eachPanchayatLink in panchayatLinks:
+                   logger.info(eachPanchayatLink)
+                   if "grampanchayatcode=" in eachPanchayatLink['href']:
+                     panchayatLink="http://www.nsap.nic.in/"+eachPanchayatLink['href']
+                     try:
+                       panchayatCode=re.search(r'grampanchayatcode=(.*?)&',panchayatLink).group(1)
+                     except:
+                       panchayatCode=None
+                     logger.info("%s-%s" % (panchayatCode,panchayatLink))
+                     r=requests.get(panchayatLink,cookies=cookies)
+                     if r.status_code == 200:
+                       myhtml=r.content
+                       logger.info("writing pension.html")
+                       with open("/tmp/%s.html" % panchayatCode,"wb") as f:
+                         f.write(myhtml)
+
+                 exit(0)
+    exit(0)
 #   reportType='telanganaMusters'
 #   myReports=Report.objects.filter(reportType=reportType)
 #   for eachReport in myReports:
@@ -926,38 +1287,7 @@ def main():
     createCodeObjDict(logger,pobj)
     downloadRejectedPayment(logger,pobj)
 
-  if args['test1']:
-    #Crawling Links for  MIS Reports
-    
-    with open('/tmp/ce.csv') as fp:
-      for line in fp:
-        cqID=line.lstrip().rstrip()
-        logger.info(cqID)
-        cq=CrawlQueue.objects.filter(id=cqID).first()
-        cq.attemptCount=0
-        cq.downloadStage='downloadData1'
-        cq.save()
-    exit(0)
 
-    stateCodes=['04','11','12','13','18','26','29','03','35','14']
-    stateCodes=["18"]
-    cqs=CrawlQueue.objects.filter(panchayat__block__district__state__code__in=stateCodes)
-    for cq in cqs:
-      cq.priority=15
-      cq.save()
-    exit(0)
-    myLibtechTag=LibtechTag.objects.filter(id=1).first()
-    priority=10
-    with open('/tmp/ah.csv') as fp:
-      for line in fp:
-        panchayatCode=line.lstrip().rstrip()
-        logger.info(panchayatCode)
-        eachPanchayat=Panchayat.objects.filter(code=panchayatCode).first()
-        cq=CrawlQueue.objects.filter(panchayat=eachPanchayat).first()
-        if cq is None:
-         CrawlQueue.objects.create(panchayat=eachPanchayat,priority=priority)
-    exit(0)
- 
     exit(0)
     logger.info("...END PROCESSING") 
   exit(0)

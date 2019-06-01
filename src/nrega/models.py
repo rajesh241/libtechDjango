@@ -46,22 +46,26 @@ class Location(models.Model):
   parentLocation=models.ForeignKey('self',on_delete=models.SET_NULL,blank=True,null=True)
   slug=models.SlugField(blank=True) 
   crawlIP=models.CharField(max_length=256,null=True,blank=True)
-  stateShortCode=models.CharField(max_length=2)
+  stateShortCode=models.CharField(max_length=2,null=True,blank=True)
   stateCode=models.CharField(max_length=2,null=True,blank=True)
+  districtCode=models.CharField(max_length=4,null=True,blank=True)
+  blockCode=models.CharField(max_length=7,null=True,blank=True)
+  panchayatCode=models.CharField(max_length=10,null=True,blank=True)
   filepath=models.CharField(max_length=2048,null=True,blank=True)
   isNIC=models.BooleanField(default=True)
   remarks=models.TextField(blank=True,null=True)
+  priority=models.PositiveSmallIntegerField(default=0)
   class Meta:
     db_table = 'location'
   def __str__(self):
-    return self.name
+    return self.code+self.displayName
 
 class Info(models.Model):
   name=models.CharField(max_length=256)
   slug=models.SlugField(blank=True) 
   location=models.ForeignKey('Location',on_delete=models.CASCADE)
   finyear=models.CharField(max_length=2,null=True,blank=True)
-  value=models.DecimalField(max_digits=10,decimal_places=4,null=True,blank=True)
+  value=models.DecimalField(max_digits=16,decimal_places=4,null=True,blank=True)
   textValue=models.CharField(max_length=2048,null=True,blank=True)
   class Meta:
     db_table = 'info'
@@ -238,6 +242,7 @@ class CrawlState(models.Model):
 
 class CrawlRequest(models.Model):
   libtechTag=models.ManyToManyField('LibtechTag',related_name="crawlReqeustTag",blank=True)
+  location=models.ForeignKey('Location',on_delete=models.CASCADE,null=True,blank=True)
   panchayat=models.ForeignKey('panchayat',on_delete=models.CASCADE,null=True,blank=True)
   block=models.ForeignKey('block',on_delete=models.CASCADE,null=True,blank=True)
   district=models.ForeignKey('district',on_delete=models.CASCADE,null=True,blank=True)
@@ -264,7 +269,9 @@ class CrawlRequest(models.Model):
   class Meta:
     db_table = 'crawlRequest'
   def __str__(self):
-    if self.panchayat is not  None:
+    if self.location is not None:
+      return "%s-%s" % (self.location.code,self.location.displayName)
+    elif self.panchayat is not  None:
       return "%s-%s-%s-%s-%s" % (self.panchayat.code,self.panchayat.block.district.state.name,self.panchayat.block.district.name,self.panchayat.block.name,self.panchayat.name)
     elif self.block is not  None:
       return "%s-%s-%s-%s" % (self.block.code,self.block.district.state.name,self.block.district.name,self.block.name)
@@ -1084,7 +1091,9 @@ def crawlRequest_post_save_receiver(sender,instance,*args,**kwargs):
   else:
     sc=None
   if instance.crawlState is None:
-    if instance.sequenceType == 'dd':
+    if instance.sequenceType == 'pension':
+      cs=CrawlState.objects.filter(sequence=300).first()
+    elif instance.sequenceType == 'dd':
       cs=CrawlState.objects.filter(sequence=200).first()
     else:
       if sc == telanganaStateCode:

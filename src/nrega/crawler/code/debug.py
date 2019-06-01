@@ -103,7 +103,40 @@ def main():
    #if cq is not  None:
    #  stateURL="http://nregasp2.nic.in/netnrega/homestciti.aspx?state_code=34&state_name=JHARKHAND" % (
     crawlerMain(logger,cqID)
+  if args['test1']:
+    lobjs=Location.objects.filter(locationType='state')
+    for lobj in lobjs:
+      logger.info(lobj.name)
+      for finyear in range(int(17),int(19)+1):
+        getattr(crawlerFunctions,"getFTOStat")(logger,lobj,finyear)
+        getattr(crawlerFunctions,"processFTOStat")(logger,lobj,finyear)
+    exit(0)
   if args['test']:
+    funcName='downloadGlance'
+    lobjs=Location.objects.filter(locationType = 'state')
+    for lobj in lobjs:
+      logger.info(lobj) 
+      getattr(crawlerFunctions,funcName)(logger,lobj)
+    exit(0)
+   #lobj=Location.objects.filter(code='2708001').first()
+   #getattr(crawlerFunctions,funcName)(logger,lobj)
+   #exit(0)
+    crs=CrawlRequest.objects.filter(crawlState__name="ddComplete",id__gte=92).order_by("id")
+    for cr in crs:
+      logger.info(cr.id)
+      logger.info(cr.location)
+      myBlocks=Location.objects.filter(locationType='block',parentLocation=cr.location)
+      for eachBlock in myBlocks:
+        getattr(crawlerFunctions,funcName)(logger,eachBlock)
+
+        for finyear in range(int(17),int(19)+1):
+          getattr(crawlerFunctions,'processBlockStat')(logger,eachBlock,finyear)
+        myPanchayats=Location.objects.filter(locationType='panchayat',parentLocation=eachBlock)
+        for eachPanchayat in myPanchayats:
+          getattr(crawlerFunctions,funcName)(logger,eachPanchayat)
+
+
+    exit(0)
     bs=BlockStat.objects.all()
     for obj in bs:
       obj.save()

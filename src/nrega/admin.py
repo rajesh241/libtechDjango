@@ -14,8 +14,9 @@ class stateModelAdmin(admin.ModelAdmin):
     model=State
 
 class infoModelAdmin(admin.ModelAdmin):
+  actions = [export_as_csv_action("CSV Export")]
   list_display=["location","name","finyear","value"]
-  list_filter=["finyear","name"]
+  list_filter=["finyear","location__locationType","name"]
   search_fields=["location__code","name","location__name"]
   readonly_fields=["location"]
 class locationModelAdmin(admin.ModelAdmin):

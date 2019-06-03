@@ -28,7 +28,11 @@ from nrega.crawler.commons.nregaSettings import startFinYear,panchayatCrawlThres
 from nrega.crawler.commons.sn import driverInitialize, driverFinalize, displayInitialize, displayFinalize
 from nrega.crawler.commons.nregaFunctions import stripTableAttributes,htmlWrapperLocal,getCurrentFinYear,table2csv,getFullFinYear,loggerFetch,getDateObj,getCenterAlignedHeading,stripTableAttributesPreserveLinks
 from nrega import models  as nregamodels
+<<<<<<< HEAD
 from nrega.models import Jobcard,Location,CrawlRequest,Info
+=======
+from nrega.models import Jobcard,Location,CrawlRequest
+>>>>>>> a4db094c7176cc4e939d5552e11aace29ccbd4c2
 from commons import savePanchayatReport,uploadReportAmazon,getjcNumber,isReportUpdated
 import django
 from django.core.wsgi import get_wsgi_application
@@ -967,6 +971,7 @@ def main():
         csvWriter.writerow(a)
 
   if args['test']:
+<<<<<<< HEAD
     objs=Info.objects.filter(location__locationType='state',slug='women-persondays-out-of-total',finyear='19')
     s="code,rejected\n"
     for obj in objs:
@@ -976,6 +981,8 @@ def main():
     with open("/tmp/data.csv","w") as f:
       f.write(s)
     exit(0)
+=======
+>>>>>>> a4db094c7176cc4e939d5552e11aace29ccbd4c2
     lobjs=Location.objects.filter(locationType=="state")
     for lobj in lobjs:
       logger.info(lobj)

@@ -1,7 +1,10 @@
 import json
 import os
 import sys
+<<<<<<< HEAD
 import csv
+=======
+>>>>>>> a4db094c7176cc4e939d5552e11aace29ccbd4c2
 fileDir = os.path.dirname(os.path.realpath(__file__))
 rootDir=fileDir+"/../../../"
 sys.path.insert(0, rootDir)
@@ -16,7 +19,10 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", djangoSettings)
 django.setup()
 
 from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlState,Location
+<<<<<<< HEAD
 from nrega import models  as nregamodels
+=======
+>>>>>>> a4db094c7176cc4e939d5552e11aace29ccbd4c2
 
 def argsFetch():
   '''
@@ -28,7 +34,10 @@ def argsFetch():
   parser.add_argument('-l', '--log-level', help='Log level defining verbosity', required=False)
   parser.add_argument('-n', '--name', help='Name of location that needs to be imported allowed values are {district,block,panchayat}', required=False)
   parser.add_argument('-e', '--export', help='Export Json Data', required=False,action='store_const', const=1)
+<<<<<<< HEAD
   parser.add_argument('-mn', '--modelName', help='ModelName that needs to be export or imported', required=False)
+=======
+>>>>>>> a4db094c7176cc4e939d5552e11aace29ccbd4c2
   parser.add_argument('-i', '--import', help='import Json Data', required=False,action='store_const', const=1)
   parser.add_argument('-p', '--populateLocation', help='Populate Locations', required=False,action='store_const', const=1)
   parser.add_argument('-t', '--test', help='A Test Loop', required=False,action='store_const', const=1)
@@ -230,6 +239,7 @@ def main():
       l.save()
      
   if args['export']:
+<<<<<<< HEAD
     modelName=args['modelName']
     if modelName is None:
       logger.info("Nothing to Export")
@@ -263,6 +273,9 @@ def main():
         json.dump(d, f, ensure_ascii=False)
       
     exit(0)
+=======
+    logger.info("Going to export location JSON Data")
+>>>>>>> a4db094c7176cc4e939d5552e11aace29ccbd4c2
     allStates=State.objects.all()
     d=dict()
     for eachState in allStates:

@@ -15,6 +15,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", djangoSettings)
 django.setup()
 
 from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlState,Location
+from nrega import models  as nregamodels
 
 def argsFetch():
   '''
@@ -26,6 +27,7 @@ def argsFetch():
   parser.add_argument('-l', '--log-level', help='Log level defining verbosity', required=False)
   parser.add_argument('-n', '--name', help='Name of location that needs to be imported allowed values are {district,block,panchayat}', required=False)
   parser.add_argument('-e', '--export', help='Export Json Data', required=False,action='store_const', const=1)
+  parser.add_argument('-mn', '--modelName', help='ModelName that needs to be export or imported', required=False)
   parser.add_argument('-i', '--import', help='import Json Data', required=False,action='store_const', const=1)
   parser.add_argument('-p', '--populateLocation', help='Populate Locations', required=False,action='store_const', const=1)
   parser.add_argument('-t', '--test', help='A Test Loop', required=False,action='store_const', const=1)
@@ -227,7 +229,39 @@ def main():
       l.save()
      
   if args['export']:
-    logger.info("Going to export location JSON Data")
+    modelName=args['modelName']
+    if modelName is None:
+      logger.info("Nothing to Export")
+    else:
+      logger.info("Going to export %s JSON Data" % (modelName))
+      fieldArray=[]
+      foreignKeyFieldArray=[]
+      for f in getattr(nregamodels,modelName)._meta.get_fields(include_parents=False):
+          if ( (f.many_to_one or f.one_to_one)): 
+            foreignKeyFieldArray.append(f.name)
+          elif f.auto_created:
+            logger.info("Primary Key")
+          else:
+            fieldArray.append(f.name)
+      d={}
+      i=0
+      objs=getattr(nregamodels,modelName).objects.all()
+      for obj in objs:
+        logger.info(obj.id)
+        p={}
+        for field in fieldArray:
+          p[field]=getattr(obj,field)
+        for field in foreignKeyFieldArray:
+          try:
+            p[field]=str(getattr(obj,field))
+          except:
+            p[field]=None
+        i=i+1
+        d[i]=p
+      with open('%s.json' % (modelName.lower()), 'w') as f:
+        json.dump(d, f, ensure_ascii=False)
+      
+    exit(0)
     allStates=State.objects.all()
     d=dict()
     for eachState in allStates:

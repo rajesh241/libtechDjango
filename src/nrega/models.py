@@ -58,7 +58,7 @@ class Location(models.Model):
   class Meta:
     db_table = 'location'
   def __str__(self):
-    return self.code+self.displayName
+    return self.code
 
 class Info(models.Model):
   name=models.CharField(max_length=256)

@@ -46,6 +46,7 @@ def argsFetch():
   parser.add_argument('-l', '--log-level', help='Log level defining verbosity', required=False)
   parser.add_argument('-e', '--execute', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=1)
   parser.add_argument('-d', '--debug', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=1)
+  parser.add_argument('-z', '--zip', help='Zipping the reports', required=False,action='store_const', const=1)
   parser.add_argument('-cqID', '--crawlQueueID', help='Manage Panchayat Crawl Queue', required=False)
   parser.add_argument('-objID', '--objID', help='Manage Panchayat Crawl Queue', required=False)
   parser.add_argument('-mn', '--modelName', help='Manage Panchayat Crawl Queue', required=False)
@@ -97,6 +98,24 @@ def main():
       getattr(crawlerFunctions,funcName)(logger,pobj,finyear)
     else:
       getattr(crawlerFunctions,funcName)(logger,pobj)
+  if args['zip']:
+    reportType="workPaymentAP"
+    blockCodes=["3614005","3614006","3614007","3614008"]
+    for eachBlockCode in blockCodes:
+      myReports=Report.objects.filter(panchayat__block__code=eachBlockCode,reportType=reportType)
+      for eachReport in myReports:
+        blockSlug=eachReport.panchayat.block.slug
+        panchayatSlug=eachReport.panchayat.slug
+        logger.info("Downloading %s-%s-%s" % (blockSlug,panchayatSlug,eachReport.finyear))
+        filepath="/tmp/r/%s/" % (blockSlug)
+        if not os.path.exists(filepath):
+          os.makedirs(filepath)
+        filename="%s/%s-workPaymentAP_%s.csv" % (filepath,panchayatSlug,eachReport.finyear)
+        r=requests.get(eachReport.reportURL)
+        if r.status_code == 200:
+          mycsv=r.content
+          with open(filename,"wb") as f:
+            f.write(mycsv)
   if args['singleExecute']:
     cqID=args['testInput']
    #cq=CrawlRequest.objects.filter(id=cqID).first()

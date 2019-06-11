@@ -29,6 +29,7 @@ def argsFetch():
   parser.add_argument('-n', '--name', help='Name of location that needs to be imported allowed values are {district,block,panchayat}', required=False)
   parser.add_argument('-e', '--export', help='Export Json Data', required=False,action='store_const', const=1)
   parser.add_argument('-mn', '--modelName', help='ModelName that needs to be export or imported', required=False)
+  parser.add_argument('-ufn', '--uniqueFieldName', help='ModelName that needs to be export or imported', required=False)
   parser.add_argument('-i', '--import', help='import Json Data', required=False,action='store_const', const=1)
   parser.add_argument('-p', '--populateLocation', help='Populate Locations', required=False,action='store_const', const=1)
   parser.add_argument('-t', '--test', help='A Test Loop', required=False,action='store_const', const=1)
@@ -63,6 +64,43 @@ def main():
     for lt in lts:
       logger.info(lt.name)
   if args['import']:
+
+    modelName=args['modelName']
+    uniqueFieldName=args['uniqueFieldName']
+    if modelName is None:
+      logger.info("Nothing to import")
+    else:
+      fieldArray=[]
+      foreignKeyFieldArray=[]
+      for f in getattr(nregamodels,modelName)._meta.get_fields(include_parents=False):
+          if ( (f.many_to_one or f.one_to_one)): 
+            foreignKeyFieldArray.append(f.name)
+          elif f.auto_created:
+            logger.info("Primary Key")
+          else:
+            fieldArray.append(f.name)
+      jsonName='%s.json' % (modelName.lower())
+      json_data=open(jsonName,encoding='utf-8-sig').read()
+      d = json.loads(json_data)
+      for i,modelDict in d.items():
+        uniqueFieldValue=modelDict[uniqueFieldName]
+        logger.info(f'{uniqueFieldName} has value {uniqueFieldValue}')
+        obj=getattr(nregamodels,modelName).objects.filter(**{ uniqueFieldName: uniqueFieldValue }).first()
+        if obj is None:
+          obj=getattr(nregamodels,modelName).objects.create(**{ uniqueFieldName: uniqueFieldValue })
+
+        for field,value in modelDict.items():
+          if field not in foreignKeyFieldArray:
+            setattr(obj,field,value) 
+            #logger.info("Field %s Value %s " % (field,value))
+          else:
+            if value is not None:
+              foreignKeyValue=getattr(nregamodels,modelName).objects.filter(**{ uniqueFieldName: value }).first()
+              setattr(obj,field,foreignKeyValue)
+        logger.info(f'Saving {obj.id} - {obj.name}')    
+        obj.save()
+    exit(0)
+
     logger.info("Importing Data in to the system")
 
     #Start with Populating Crawl States

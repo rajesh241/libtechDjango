@@ -500,6 +500,7 @@ class PanchayatStat(models.Model):
 
 class Jobcard(models.Model):
   panchayat=models.ForeignKey('Panchayat',db_index=True,on_delete=models.CASCADE,blank=True,null=True)
+  location=models.ForeignKey('Location',db_index=True,on_delete=models.CASCADE,blank=True,null=True)
   village=models.ForeignKey('Village',on_delete=models.CASCADE,blank=True,null=True)
   libtechTag=models.ManyToManyField('LibtechTag',related_name="jobcardTag",blank=True)
   code=models.CharField(max_length=256,db_index=True,blank=True,null=True)
@@ -565,6 +566,7 @@ class Worker(models.Model):
  
 class Muster(models.Model):
   panchayat=models.ForeignKey('Panchayat',on_delete=models.CASCADE,db_index=True,blank=True,null=True)
+  location=models.ForeignKey('Location',on_delete=models.CASCADE,db_index=True,blank=True,null=True)
   block=models.ForeignKey('block',on_delete=models.CASCADE)
   finyear=models.CharField(max_length=2)
   code=models.CharField(max_length=256,db_index=True,blank=True,null=True)

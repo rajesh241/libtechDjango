@@ -28,7 +28,7 @@ from nrega.crawler.commons.nregaSettings import startFinYear,panchayatCrawlThres
 from nrega.crawler.commons.sn import driverInitialize, driverFinalize, displayInitialize, displayFinalize
 from nrega.crawler.commons.nregaFunctions import stripTableAttributes,htmlWrapperLocal,getCurrentFinYear,table2csv,getFullFinYear,loggerFetch,getDateObj,getCenterAlignedHeading,stripTableAttributesPreserveLinks
 from nrega import models  as nregamodels
-from nrega.models import Jobcard,Location,CrawlRequest,Info
+from nrega.models import Jobcard,Location,CrawlRequest,Info,APWorkPayment
 from nrega.models import Jobcard,Location,CrawlRequest
 from commons import savePanchayatReport,uploadReportAmazon,getjcNumber,isReportUpdated
 import django
@@ -296,6 +296,7 @@ def argsFetch():
   parser.add_argument('-se', '--singleExecute', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=1)
   parser.add_argument('-csm', '--crawlStateMachine', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=2)
   parser.add_argument('-d', '--debug', help='Debug Panchayat Crawl Queue', required=False,action='store_const', const=1)
+  parser.add_argument('-z', '--zipReports', help='Create an archive of reports', required=False,action='store_const', const=1)
   parser.add_argument('-t', '--test', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=1)
   parser.add_argument('-t1', '--test1', help='Manage Panchayat Crawl Queue', required=False,action='store_const', const=1)
   parser.add_argument('-ti', '--testInput', help='Test Input', required=False)
@@ -968,6 +969,38 @@ def main():
         csvWriter.writerow(a)
 
   if args['test']:
+    logger.info("Coutig the number of jObcards")
+    objs=Jobcard.objects.filter(panchayat__block__district__state__code=telanganaStateCode)
+    logger.info(len(objs))
+    i=len(objs)
+    for obj in objs:
+      logger.info(i)
+      i=i-1
+      code=obj.panchayat.code
+      myLocation=Location.objects.filter(code=code).first()
+      obj.location=myLocation
+      obj.save()
+    exit(0)
+    objs=Report.objects.all().order_by("-id")
+    for obj in objs:
+      logger.info(obj.id)
+      if obj.panchayat is not None:
+        code=obj.panchayat.code
+      elif obj.block is not None:
+        code=obj.block.code
+      else:
+        code=None
+      if code is not None:
+        myLocation=Location.objects.filter(code=code).first()
+        obj.location=myLocation
+        obj.save()
+    exit(0)
+    obj=Jobcard.objects.filter(tjobcard='141920806006010695').first()
+    wps=APWorkPayment.objects.filter(jobcard=obj)
+    for wp in wps:
+      logger.info(f"{wp.id} - {wp.dateFrom}")
+    logger.info(obj.id)
+    exit(0)
     objs=Info.objects.filter(location__locationType='state',slug='women-persondays-out-of-total',finyear='19')
     s="code,rejected\n"
     for obj in objs:

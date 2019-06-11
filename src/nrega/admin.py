@@ -4,7 +4,7 @@ from django.utils.safestring import mark_safe
 
 import time
 # Register your models here.
-from .models import State,District,Block,Panchayat,Muster,Wagelist,FTO,CrawlQueue,Report,Jobcard,LibtechTag,Worker,APWorkPayment,Village,PanchayatCrawlInfo,PanchayatStat,WagelistTransaction,DPTransaction,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,JobcardStat,CrawlState,CrawlRequest,PaymentTransaction,WorkPayment,BlockStat,Location,Info
+from .models import State,District,Block,Panchayat,Muster,Wagelist,FTO,CrawlQueue,Report,Jobcard,LibtechTag,Worker,APWorkPayment,Village,PanchayatCrawlInfo,PanchayatStat,WagelistTransaction,DPTransaction,DemandWorkDetail,MISReportURL,RejectedPayment,WorkDetail,JobcardStat,CrawlState,CrawlRequest,PaymentTransaction,WorkPayment,BlockStat,Location,Info,PDSLocation,PDSStat
 from .actions import download_reports_zip,setisError,setisProcessedFalse,setisActiveFalse,setisActiveTrue,removeTags,setIsSampleFalse,resetTaskInProgress,resetStepStarted,setInProgress,resetInProgress,resetAttemptCount,export_as_csv_action
 from config.defines import hostname,hostport
 
@@ -25,7 +25,21 @@ class locationModelAdmin(admin.ModelAdmin):
   search_fields=["code"]
   readonly_fields = ["parentLocation"]
   class Meta:
-    model=State
+    model=Location
+
+class pdsStatModelAdmin(admin.ModelAdmin):
+  list_display=["id","pdsLocation","downloadDate"]
+  readonly_fields=["pdsLocation"]
+  class Meta:
+    model=PDSStat
+class pdsLocationModelAdmin(admin.ModelAdmin):
+  list_display = ["name","code","priority"]
+  list_filter = ["locationType"]
+  search_fields=["code"]
+  readonly_fields = ["parentLocation"]
+  class Meta:
+    model=PDSLocation
+
 
 class districtModelAdmin(admin.ModelAdmin):
   list_display = ["name","code"]
@@ -246,5 +260,7 @@ admin.site.register(PaymentTransaction,paymentTransactionModelAdmin)
 admin.site.register(WorkPayment,workPaymentModelAdmin)
 admin.site.register(BlockStat,blockStatModelAdmin)
 admin.site.register(Location,locationModelAdmin)
+admin.site.register(PDSLocation,pdsLocationModelAdmin)
 admin.site.register(Info,infoModelAdmin)
+admin.site.register(PDSStat,pdsStatModelAdmin)
 # Register your models here.

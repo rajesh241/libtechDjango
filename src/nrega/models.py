@@ -36,6 +36,35 @@ class LibtechTag(models.Model):
     json_data = json.dumps(data)
     return json_data
 
+class PDSLocation(models.Model):
+  name=models.CharField(max_length=256)
+  displayName=models.CharField(max_length=2048)
+  locationType=models.CharField(max_length=64)
+  nameInLocalLanguage=models.BooleanField(default=False)
+  englishName=models.CharField(max_length=256,null=True,blank=True)
+  code=models.CharField(max_length=255,unique=True,db_index=True)
+  parentLocation=models.ForeignKey('self',on_delete=models.SET_NULL,blank=True,null=True)
+  slug=models.SlugField(blank=True) 
+  stateCode=models.CharField(max_length=2,null=True,blank=True)
+  districtCode=models.CharField(max_length=4,null=True,blank=True)
+  blockCode=models.CharField(max_length=7,null=True,blank=True)
+  panchayatCode=models.CharField(max_length=10,null=True,blank=True)
+  filepath=models.CharField(max_length=2048,null=True,blank=True)
+  remarks=models.TextField(blank=True,null=True)
+  priority=models.PositiveSmallIntegerField(default=0)
+  class Meta:
+    db_table = 'pdslocation'
+  def __str__(self):
+    return self.code
+
+class PDSStat(models.Model):
+  pdsLocation=models.ForeignKey('PDSLocation',on_delete=models.CASCADE,null=True,blank=True)
+  downloadDate=models.DateTimeField(null=True,blank=True)
+  class Meta:
+    db_table = 'pdsstat'
+  def __str__(self):
+    return self.pdsLocation.name
+  
 class Location(models.Model):
   name=models.CharField(max_length=256)
   displayName=models.CharField(max_length=2048)
@@ -1127,6 +1156,7 @@ post_save.connect(rejectedPayment_post_save_receiver,sender=RejectedPayment)
 post_save.connect(wagelist_post_save_receiver,sender=Wagelist)
 post_save.connect(fto_post_save_receiver,sender=FTO)
 post_save.connect(location_post_save_receiver,sender=Location)
+post_save.connect(location_post_save_receiver,sender=PDSLocation)
 post_save.connect(location_post_save_receiver,sender=State)
 post_save.connect(location_post_save_receiver,sender=District)
 post_save.connect(location_post_save_receiver,sender=Block)

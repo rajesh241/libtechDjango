@@ -932,6 +932,25 @@ def main():
       logger.info(eachPanchayat.name)
 
   if args['test1']:
+    baseDir="/tmp/rn6"
+    outfile="/tmp/rn6.csv"
+    i=0
+    outcsv=''
+    for subdir, dirs, files in os.walk(baseDir):
+      for file in files:
+        filename=os.path.join(subdir, file)
+        if "csv" in filename:
+          logger.info(filename)
+          f = open(filename, "r")
+          for s in f:
+            if (("Mandal Name," in s) and (i >  0)):
+              logger.info("header row")
+            else:
+              outcsv+=s  
+          i=i+1
+    with open(outfile,"w") as f:
+      f.write(outcsv)
+    exit(0)
     crs=CrawlRequest.objects.filter(location__parentLocation='02')
     for cr in crs:
       cr.priority=0

@@ -558,6 +558,13 @@ class Worker(models.Model):
   isExtraSample=models.BooleanField(default=False)
   oldID=models.IntegerField(blank=True,null=True)  #This is Duration that last Crawl took in Minutes
    
+  contentFileURL=models.URLField(max_length=2048,blank=True,null=True)
+  isDownloaded=models.BooleanField(default=False)
+  downloadDate=models.DateTimeField(null=True,blank=True)
+  errorDate=models.DateTimeField(null=True,blank=True)
+  isError=models.BooleanField(default=False)
+  downloadAttemptCount=models.PositiveSmallIntegerField(default=0)
+
   class Meta:
     unique_together = ('jobcard', 'name','applicantNo')  
     db_table = 'worker'

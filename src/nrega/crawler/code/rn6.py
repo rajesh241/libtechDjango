@@ -75,8 +75,21 @@ def updateViewStateValidation(logger,myhtml,d,fields):
       d[field]=''
   return d
  
-def downloadLedger(logger,jobcard):
+def downloadLedger(logger,obj,dirname=None):
+  if dirname is None:
+    dirname="/tmp/rn6"
+  block_name=obj.jobcard.panchayat.block.slug
+  panchayat_name=obj.jobcard.panchayat.slug
+  try:
+    village_name=obj.jobcard.village.name
+  except:
+    village_name=''
+  jobcard = (obj.jobcard.tjobcard + '-0' + str(obj.applicantNo))
+  jobcard_no=jobcard
+  dirname="%s/%s/%s" % (dirname,block_name,panchayat_name)
   filename = '%s/%s_%s_%s_ledger_details.html' % (dirname, block_name, panchayat_name, jobcard_no)
+  if not os.path.exists(dirname):
+    os.makedirs(dirname)
   districtCode='14'
   r=requests.get("https://bdp.tsonline.gov.in/NeFMS_TS/NeFMS/Reports/NeFMS/AccountWiseTransactionReport.aspx")
   if r.status_code == 200:
@@ -141,6 +154,7 @@ def downloadLedger(logger,jobcard):
       f.write(myhtml)
     data['__EVENTTARGET']=''
     data['ctl00$MainContent$txtSSPPEN']='142000520007010154-02'
+    data['ctl00$MainContent$txtSSPPEN']=jobcard
     data['ctl00$MainContent$btnMakePayment']=''
     """
 data = {
@@ -234,7 +248,7 @@ data = {
     logger.info(encodedurl)
     cmd="curl '%s' -H 'Host: bdp.tsonline.gov.in' -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:45.0) Gecko/20100101 Firefox/45.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H 'Accept-Language: en-GB,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br' -H 'Cookie: ASP.NET_SessionId=2lxez2aiie121s45h3hva3nd' -H 'Connection: keep-alive' | gunzip > %s" % (url,filename)
     os.system(cmd)
-    data=parse_rn6_report(logger,filename="b.html")
+    data=parse_rn6_report(logger,filename=filename,panchayat_name=panchayat_name,village_name=village_name,jobcard_no=jobcard)
     logger.info(data)
     csv_filename = filename.replace('.html','.csv')
     logger.info('Writing to CSV [%s]' % csv_filename)
@@ -351,10 +365,22 @@ def main():
   args = argsFetch()
   logger = loggerFetch(args.get('log_level'))
   if args['test']:
+    obj=Worker.objects.filter(id=18589608).first()
+    logger.info(obj.jobcard.tjobcard)
+    logger.info("%s-0%s" % (obj.jobcard.tjobcard,str(obj.applicantNo)))
+    exit(0)
+    obj=Worker.objects.filter(jobcard__tjobcard='142000606009010116',applicantNo=1).first()
+    logger.info(obj.id)
+    logger.info(obj.jobcard.location.code)
+    exit(0)
     logger.info("Testing it with basic code")
-    jobcard=args['testInput']
-    jobcard='142000520007010154-02'
-    downloadLedger(logger,jobcard)
+    blockCode='3614006'
+    workers=Worker.objects.filter(jobcard__panchayat__block__code=blockCode)[:10]
+    for w in workers:
+      jobcard_no = (w.jobcard.tjobcard + '-0' + str(w.applicantNo))
+      logger.info(jobcard_no)
+   # jobcard='142000520007010154-02'
+      downloadLedger(logger,w)
   logger.info("...END PROCESSING") 
   exit(0)
 if __name__ == '__main__':

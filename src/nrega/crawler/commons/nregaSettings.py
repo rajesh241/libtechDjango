@@ -12,7 +12,7 @@ jobCardRegisterTimeThreshold = datetime.now() - timedelta(days=4)
 telanganaJobcardTimeThreshold = datetime.now() - timedelta(days=5)
 crawlerTimeThreshold = datetime.now() - timedelta(days=3)
 #crawlerTimeThreshold = datetime.now() - timedelta(hours=1)
-crawlerErrorTimeThreshold = datetime.now() - timedelta(minutes=60)
+crawlerErrorTimeThreshold = datetime.now() - timedelta(days=3)
 crawlProcessTimeThreshold=3 #this is about an hour
 statsURL="http://mnregaweb4.nic.in/netnrega/all_lvl_details_new.aspx"
 wagelistGenerationThresholdDays = 30

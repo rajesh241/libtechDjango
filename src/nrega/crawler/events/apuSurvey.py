@@ -26,7 +26,7 @@ from django.db.models import F,Q,Sum,Count
 from django.db import models
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", djangoSettings)
 django.setup()
-from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Village,Worker,JobcardStat,Wagelist,WagelistTransaction,DPTransaction,FTO,Report,PanchayatStat
+from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Village,Worker,JobcardStat,Wagelist,WagelistTransaction,DPTransaction,FTO,Report,PanchayatStat,WorkPayment
 from nrega.crawler.code.commons import uploadReportAmazon
 def argsFetch():
   '''
@@ -57,9 +57,18 @@ def main():
     logger.info("Testing")
     lts=LibtechTag.objects.filter(id=6)
     workers=Worker.objects.filter(libtechTag__in=lts,jobcard__panchayat__block__district__state__code=apStateCode)
+    myWorker=Worker.objects.filter(libtechTag__in=lts).first()
+    logger.info(myWorker.id)
+    wps=WorkPayment.objects.filter(worker=myWorker)
+    for wp in wps:
+      logger.info(f"{wp.id}-{wp.muster.dateTo}--{wp.creditedDate}")
+    exit(0)
+
     workers=Worker.objects.filter(libtechTag__in=lts)
+    i=0
     for eachWorker in workers:
-      logger.info(eachWorker.name)
+      i=i+1
+      logger.info(f"{i}-{eachWorker.name}--{eachWorker.oldID}")
   logger.info("...END PROCESSING") 
   exit(0)
 

@@ -22,7 +22,7 @@ class infoModelAdmin(admin.ModelAdmin):
 class locationModelAdmin(admin.ModelAdmin):
   list_display = ["name","stateShortCode","code","crawlIP","priority"]
   list_filter = ["locationType"]
-  search_fields=["code"]
+  search_fields=["code","name"]
   readonly_fields = ["parentLocation"]
   class Meta:
     model=Location

@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from bs4 import BeautifulSoup
 import re
 import random
@@ -26,7 +27,7 @@ from django.db.models import F,Q,Sum,Count
 from django.db import models
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", djangoSettings)
 django.setup()
-from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Village,Worker,JobcardStat,Wagelist,WagelistTransaction,DPTransaction,FTO,Report,PanchayatStat,CrawlRequest
+from nrega.models import State,District,Block,Panchayat,Muster,LibtechTag,CrawlQueue,Village,Worker,JobcardStat,Wagelist,WagelistTransaction,DPTransaction,FTO,Report,PanchayatStat,CrawlRequest,Info
 from nrega.crawler.code.commons import uploadReportAmazon
 from nrega.crawler.code.crawlerFunctions import crawlerMain,crawlFTORejectedPayment,dumpDataCSV
 from nrega.crawler.code.crawlerFunctions import processWagelist,createCodeObjDict,LocationObject,CrawlerObject
@@ -57,6 +58,13 @@ def argsFetch():
 def main():
   args = argsFetch()
   logger = loggerFetch(args.get('log_level'))
+  if args['test']:
+    code=args['testInput']
+    blockCodes=["34","02","27","3403009","3406004","0203020","2721003"]
+    df=pd.DataFrame(list(Info.objects.filter(location__code__in = blockCodes).values("location__englishName","slug","name","finyear","value")))
+    df.to_csv("/tmp/glance.csv")
+    logger.info(df.head())
+
   if args['downloadRejected']:
     ltTag=LibtechTag.objects.filter(id=7).first()
     ltArray=[]
